@@ -31,11 +31,11 @@ class CardWidget(ft.Container):
         """获取卡牌颜色"""
         if self.card.is_joker():
             if self.card.value == 16:
-                return ft.colors.GREEN
-            return ft.colors.RED
+                return ft.Colors.GREEN
+            return ft.Colors.RED
         if self.card.suit and self.card.suit.value in ("♥", "♦"):
-            return ft.colors.RED
-        return ft.colors.BLACK
+            return ft.Colors.RED
+        return ft.Colors.BLACK
     
     def _get_card_display(self):
         """获取卡牌显示内容"""
@@ -57,18 +57,18 @@ class CardWidget(ft.Container):
         color = self._get_card_color()
         display_text = self._get_card_display()
         
-        self.bgcolor = ft.colors.WHITE
-        self.border = ft.border.all(2, ft.colors.BLACK12)
+        self.bgcolor = ft.Colors.WHITE
+        self.border = ft.border.all(2, ft.Colors.BLACK12)
         self.shadow = ft.BoxShadow(
             spread_radius=1,
             blur_radius=3,
-            color=ft.colors.BLACK26,
+            color=ft.Colors.BLACK26,
             offset=ft.Offset(0, 2)
         )
         
         if self.selected:
             self.offset = ft.Offset(0, -20)
-            self.border = ft.border.all(3, ft.colors.BLUE)
+            self.border = ft.border.all(3, ft.Colors.BLUE)
         else:
             self.offset = ft.Offset(0, 0)
         
@@ -113,20 +113,20 @@ class PlayerInfoWidget(ft.Column):
     
     def _build_widget(self):
         """构建组件"""
-        avatar_color = ft.colors.BLUE_GREY_400
+        avatar_color = ft.Colors.BLUE_GREY_400
         if self.player.role == PlayerRole.DIZHU:
-            avatar_color = ft.colors.ORANGE
+            avatar_color = ft.Colors.ORANGE
         
-        border_color = ft.colors.TRANSPARENT
+        border_color = ft.Colors.TRANSPARENT
         if self.is_current:
-            border_color = ft.colors.GREEN
+            border_color = ft.Colors.GREEN
         
         self.controls = [
             ft.Container(
                 content=ft.Icon(
                     ft.Icons.PERSON,
                     size=40,
-                    color=ft.colors.WHITE
+                    color=ft.Colors.WHITE
                 ),
                 width=60,
                 height=60,
@@ -145,7 +145,7 @@ class PlayerInfoWidget(ft.Column):
                     ft.Text(
                         f"({self.player.role.value})",
                         size=12,
-                        color=ft.colors.ORANGE if self.player.role == PlayerRole.DIZHU else ft.colors.GREY
+                        color=ft.Colors.ORANGE if self.player.role == PlayerRole.DIZHU else ft.Colors.GREY
                     )
                 ],
                 alignment=ft.MainAxisAlignment.CENTER
@@ -153,7 +153,7 @@ class PlayerInfoWidget(ft.Column):
             ft.Text(
                 f"手牌: {self.player.get_hand_count()} 张",
                 size=12,
-                color=ft.colors.GREY_600
+                color=ft.Colors.GREY_600
             )
         ]
     
@@ -187,7 +187,7 @@ class DoudizhuGameUI:
         self.page = page
         page.title = "斗地主游戏"
         page.theme_mode = ft.ThemeMode.LIGHT
-        page.bgcolor = ft.colors.GREEN_700
+        page.bgcolor = ft.Colors.GREEN_700
         page.padding = 20
         page.window_width = 1000
         page.window_height = 700
@@ -205,8 +205,8 @@ class DoudizhuGameUI:
             width=150,
             height=50,
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.BLUE,
-                color=ft.colors.WHITE,
+                bgcolor=ft.Colors.BLUE,
+                color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD)
             )
         )
@@ -218,8 +218,8 @@ class DoudizhuGameUI:
             height=50,
             disabled=True,
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.GREEN,
-                color=ft.colors.WHITE,
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
             )
         )
@@ -231,8 +231,8 @@ class DoudizhuGameUI:
             height=50,
             disabled=True,
             style=ft.ButtonStyle(
-                bgcolor=ft.colors.RED,
-                color=ft.colors.WHITE,
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
             )
         )
@@ -240,7 +240,7 @@ class DoudizhuGameUI:
         self.message_text = ft.Text(
             "",
             size=16,
-            color=ft.colors.WHITE,
+            color=ft.Colors.WHITE,
             weight=ft.FontWeight.BOLD,
             text_align=ft.TextAlign.CENTER
         )
@@ -277,7 +277,7 @@ class DoudizhuGameUI:
                     [self.player_info_widgets[1]],
                     alignment=ft.MainAxisAlignment.CENTER
                 ),
-                ft.Divider(height=10, color=ft.colors.TRANSPARENT),
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                 ft.Row(
                     [
                         ft.Column(
@@ -288,18 +288,18 @@ class DoudizhuGameUI:
                         ft.Column(
                             [
                                 ft.Row(
-                                    [ft.Text("底牌:", size=14, color=ft.colors.WHITE), self.bottom_cards_row],
+                                    [ft.Text("底牌:", size=14, color=ft.Colors.WHITE), self.bottom_cards_row],
                                     alignment=ft.MainAxisAlignment.CENTER
                                 ),
-                                ft.Divider(height=5, color=ft.colors.TRANSPARENT),
+                                ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
                                 ft.Row(
-                                    [ft.Text("当前出牌:", size=14, color=ft.colors.WHITE)],
+                                    [ft.Text("当前出牌:", size=14, color=ft.Colors.WHITE)],
                                     alignment=ft.MainAxisAlignment.CENTER
                                 ),
                                 self.last_played_cards_row,
-                                ft.Divider(height=20, color=ft.colors.TRANSPARENT),
+                                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                                 self.message_text,
-                                ft.Divider(height=10, color=ft.colors.TRANSPARENT),
+                                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                                 ft.Row(
                                     [self.start_button, self.play_button, self.pass_button],
                                     alignment=ft.MainAxisAlignment.CENTER,
@@ -318,12 +318,12 @@ class DoudizhuGameUI:
                     ],
                     expand=True
                 ),
-                ft.Divider(height=20, color=ft.colors.TRANSPARENT),
+                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                 ft.Row(
                     [
                         ft.Column(
                             [
-                                ft.Text("我的手牌:", size=14, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD),
+                                ft.Text("我的手牌:", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
                                 self.hand_cards_row
                             ],
                             alignment=ft.MainAxisAlignment.CENTER,
