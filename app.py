@@ -494,9 +494,12 @@ class DoudizhuGameUI:
         self.card_widgets = []
         
         self.start_button.visible = True
+        self.start_button.disabled = False
         self.exit_button.visible = False
         self.play_button.visible = False
+        self.play_button.disabled = True
         self.pass_button.visible = False
+        self.pass_button.disabled = True
         
         self.hand_cards_row.controls.clear()
         self.last_played_cards_row.controls.clear()
@@ -507,7 +510,10 @@ class DoudizhuGameUI:
             widget.is_current = False
             widget.update_info()
         
-        self._update_buttons()
+        self.start_button.update()
+        self.exit_button.update()
+        self.play_button.update()
+        self.pass_button.update()
         self.hand_cards_row.update()
         self.last_played_cards_row.update()
         self.bottom_cards_row.update()
