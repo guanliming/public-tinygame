@@ -62,7 +62,7 @@ class DoudizhuGame(BaseGame):
         self.bottom_cards = self.deck.copy()
         
         for player in self.players:
-            player.sort_hand(key_func=lambda c: c.get_weight())
+            player.sort_hand(key_func=lambda c: -c.get_weight())
 
     def set_dizhu(self, player_index: int) -> None:
         """
@@ -76,7 +76,7 @@ class DoudizhuGame(BaseGame):
             if i == player_index:
                 player.role = PlayerRole.DIZHU
                 player.add_cards(self.bottom_cards)
-                player.sort_hand(key_func=lambda c: c.get_weight())
+                player.sort_hand(key_func=lambda c: -c.get_weight())
             else:
                 player.role = PlayerRole.FARMER
         

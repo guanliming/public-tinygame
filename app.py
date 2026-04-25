@@ -23,7 +23,8 @@ class CardWidget(ft.Container):
         self.height = 90
         self.border_radius = 8
         self.padding = 5
-        self.animate_offset = ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT)
+        self.margin = ft.margin.only(top=45, bottom=0)
+        self.animate = ft.Animation(200, ft.AnimationCurve.EASE_OUT)
         
         self._update_style()
         
@@ -67,10 +68,10 @@ class CardWidget(ft.Container):
         )
         
         if self.selected:
-            self.offset = ft.Offset(0, -20)
+            self.margin = ft.margin.only(top=0, bottom=45)
             self.border = ft.border.all(3, ft.Colors.BLUE)
         else:
-            self.offset = ft.Offset(0, 0)
+            self.margin = ft.margin.only(top=45, bottom=0)
         
         self.content = ft.Column(
             [
@@ -133,7 +134,7 @@ class PlayerInfoWidget(ft.Column):
                 bgcolor=avatar_color,
                 border_radius=30,
                 border=ft.border.all(3, border_color),
-                alignment=ft.alignment.center
+                alignment=ft.Alignment(0, 0)
             ),
             ft.Row(
                 [
@@ -180,6 +181,7 @@ class DoudizhuGameUI:
         self.start_button: Optional[ft.ElevatedButton] = None
         self.play_button: Optional[ft.ElevatedButton] = None
         self.pass_button: Optional[ft.ElevatedButton] = None
+        self.exit_button: Optional[ft.ElevatedButton] = None
         self.bottom_cards_row: Optional[ft.Row] = None
     
     def main(self, page: ft.Page):
@@ -232,6 +234,19 @@ class DoudizhuGameUI:
             disabled=True,
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.ElevatedButton(
+            "退出",
+            on_click=self._exit_game,
+            width=100,
+            height=50,
+            visible=False,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
                 color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
             )
@@ -301,7 +316,7 @@ class DoudizhuGameUI:
                                 self.message_text,
                                 ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                                 ft.Row(
-                                    [self.start_button, self.play_button, self.pass_button],
+                                    [self.start_button, self.play_button, self.pass_button, self.exit_button],
                                     alignment=ft.MainAxisAlignment.CENTER,
                                     spacing=20
                                 )
@@ -435,7 +450,8 @@ class DoudizhuGameUI:
         self._update_last_played_cards()
         self._update_bottom_cards()
         
-        self.start_button.disabled = True
+        self.start_button.visible = False
+        self.exit_button.visible = True
         self.play_button.disabled = False
         self.pass_button.disabled = not self.game.last_played_cards
         
@@ -452,18 +468,51 @@ class DoudizhuGameUI:
         
         if current_player == self.game.players[self.player_index]:
             self.play_button.disabled = False
+            self.play_button.visible = True
             
             if self.game.last_played_cards and self.game.last_played_player != current_player:
                 self.pass_button.disabled = False
+                self.pass_button.visible = True
             else:
                 self.pass_button.disabled = True
+                self.pass_button.visible = False
         else:
             self.play_button.disabled = True
             self.pass_button.disabled = True
+            self.pass_button.visible = False
         
         self.play_button.update()
         self.pass_button.update()
         self.start_button.update()
+        if self.exit_button:
+            self.exit_button.update()
+    
+    def _exit_game(self, e):
+        """退出游戏，回到开始界面"""
+        self.game = None
+        self.selected_cards = []
+        self.card_widgets = []
+        
+        self.start_button.visible = True
+        self.exit_button.visible = False
+        self.play_button.visible = False
+        self.pass_button.visible = False
+        
+        self.hand_cards_row.controls.clear()
+        self.last_played_cards_row.controls.clear()
+        self.bottom_cards_row.controls.clear()
+        
+        for widget in self.player_info_widgets:
+            widget.player = DoudizhuPlayer(widget.player.player_id, f"玩家{widget.player.player_id + 1}")
+            widget.is_current = False
+            widget.update_info()
+        
+        self._update_buttons()
+        self.hand_cards_row.update()
+        self.last_played_cards_row.update()
+        self.bottom_cards_row.update()
+        
+        self._show_message("欢迎来到斗地主！点击\"开始游戏\"按钮开始游戏。")
     
     def _play_cards(self, e):
         """出牌"""
@@ -500,8 +549,11 @@ class DoudizhuGameUI:
                 winner = self.game.get_winner()
                 self._show_message(f"游戏结束！{winner.name} 获胜！")
                 self.play_button.disabled = True
+                self.play_button.visible = False
                 self.pass_button.disabled = True
-                self.start_button.disabled = False
+                self.pass_button.visible = False
+                self.exit_button.visible = False
+                self.start_button.visible = True
                 self._update_buttons()
                 return
             
@@ -563,8 +615,11 @@ class DoudizhuGameUI:
                         winner = self.game.get_winner()
                         self._show_message(f"游戏结束！{winner.name} 获胜！")
                         self.play_button.disabled = True
+                        self.play_button.visible = False
                         self.pass_button.disabled = True
-                        self.start_button.disabled = False
+                        self.pass_button.visible = False
+                        self.exit_button.visible = False
+                        self.start_button.visible = True
                         self._update_buttons()
                         return
                 else:
