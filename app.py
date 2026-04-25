@@ -707,8 +707,32 @@ class DoudizhuGameUI:
 
 def main():
     """主函数"""
-    game_ui = DoudizhuGameUI()
-    ft.app(target=game_ui.main)
+    import os
+    
+    print("=" * 50)
+    print("斗地主游戏")
+    print("=" * 50)
+    print(f"Python 版本: {sys.version}")
+    print(f"工作目录: {os.getcwd()}")
+    print(f"Flet 版本: {ft.__version__}")
+    print("=" * 50)
+    print("正在启动游戏界面...")
+    print("游戏将在浏览器中打开。")
+    print("如果浏览器没有自动打开，请手动访问显示的 URL。")
+    print("=" * 50)
+    
+    try:
+        game_ui = DoudizhuGameUI()
+        ft.app(target=game_ui.main, view=ft.AppView.WEB_BROWSER)
+    except Exception as e:
+        print(f"\n错误: {e}")
+        print("\n可能的解决方案:")
+        print("1. 如果你在 WSL 中运行，请确保有图形界面支持，或者:")
+        print("   - 使用 Windows 本地的 Python 环境运行")
+        print("   - 或者安装并配置 X Server (如 VcXsrv)")
+        print("2. 检查 Flet 是否正确安装: pip install flet")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
