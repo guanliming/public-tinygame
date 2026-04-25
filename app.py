@@ -1,4 +1,5 @@
 import sys
+import asyncio
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -164,6 +165,78 @@ class PlayerInfoWidget(ft.Column):
         self.update()
 
 
+class PlayedCardsWidget(ft.Column):
+    """玩家出牌展示组件"""
+    
+    def __init__(self, player_index: int):
+        super().__init__()
+        self.player_index = player_index
+        self.played_cards: List[DoudizhuCard] = []
+        self.pass_text: Optional[ft.Text] = None
+        self.cards_row: Optional[ft.Row] = None
+        self.opacity = 1.0
+        
+        self.alignment = ft.MainAxisAlignment.CENTER
+        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.spacing = 5
+        
+        self._build_widget()
+    
+    def _build_widget(self):
+        """构建组件"""
+        self.pass_text = ft.Text(
+            "要不起",
+            size=16,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD,
+            visible=False
+        )
+        
+        self.cards_row = ft.Row(
+            [],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=2
+        )
+        
+        self.controls = [self.pass_text, self.cards_row]
+    
+    def show_played_cards(self, cards: List[DoudizhuCard]):
+        """显示出的牌"""
+        self.played_cards = cards
+        self.pass_text.visible = False
+        
+        self.cards_row.controls.clear()
+        for card in cards:
+            card_widget = CardWidget(card)
+            card_widget.width = 45
+            card_widget.height = 68
+            card_widget.margin = ft.margin.all(0)
+            self.cards_row.controls.append(card_widget)
+        
+        self.opacity = 1.0
+        self.update()
+    
+    def show_pass(self):
+        """显示要不起"""
+        self.played_cards = []
+        self.pass_text.visible = True
+        self.cards_row.controls.clear()
+        self.opacity = 1.0
+        self.update()
+    
+    def clear(self):
+        """清空显示"""
+        self.played_cards = []
+        self.pass_text.visible = False
+        self.cards_row.controls.clear()
+        self.opacity = 1.0
+        self.update()
+    
+    def fade_out(self, duration_ms: int = 1000):
+        """淡出效果"""
+        pass
+
+
 class DoudizhuGameUI:
     """斗地主游戏界面"""
     
@@ -174,15 +247,18 @@ class DoudizhuGameUI:
         self.card_widgets: List[CardWidget] = []
         
         self.page: Optional[ft.Page] = None
+        
         self.player_info_widgets: List[PlayerInfoWidget] = []
+        self.played_cards_widgets: List[PlayedCardsWidget] = []
+        
         self.hand_cards_row: Optional[ft.Row] = None
         self.message_text: Optional[ft.Text] = None
-        self.last_played_cards_row: Optional[ft.Row] = None
+        self.bottom_cards_row: Optional[ft.Row] = None
+        
         self.start_button: Optional[ft.Button] = None
         self.play_button: Optional[ft.Button] = None
         self.pass_button: Optional[ft.Button] = None
         self.exit_button: Optional[ft.Button] = None
-        self.bottom_cards_row: Optional[ft.Row] = None
     
     def main(self, page: ft.Page):
         """主入口"""
@@ -262,13 +338,7 @@ class DoudizhuGameUI:
         
         self.bottom_cards_row = ft.Row(
             [],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=2
-        )
-        
-        self.last_played_cards_row = ft.Row(
-            [],
-            alignment=ft.MainAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.START,
             spacing=2
         )
         
@@ -285,66 +355,92 @@ class DoudizhuGameUI:
                 is_current=False
             )
             self.player_info_widgets.append(widget)
+            played_widget = PlayedCardsWidget(i)
+            self.played_cards_widgets.append(played_widget)
+        
+        top_left_container = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("底牌:", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+                    self.bottom_cards_row
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START
+            ),
+            width=150,
+            alignment=ft.Alignment(-1, -1)
+        )
+        
+        west_player_container = ft.Column(
+            [
+                self.player_info_widgets[2],
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                self.played_cards_widgets[2]
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=1
+        )
+        
+        east_player_container = ft.Column(
+            [
+                self.player_info_widgets[1],
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                self.played_cards_widgets[1]
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=1
+        )
+        
+        center_container = ft.Column(
+            [
+                self.message_text,
+                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                ft.Row(
+                    [self.start_button, self.play_button, self.pass_button, self.exit_button],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=20
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=2
+        )
+        
+        south_player_container = ft.Column(
+            [
+                self.played_cards_widgets[0],
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                self.player_info_widgets[0],
+                ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+                ft.Text("我的手牌:", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+                self.hand_cards_row
+            ],
+            alignment=ft.MainAxisAlignment.END,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+        )
         
         return ft.Column(
             [
                 ft.Row(
-                    [self.player_info_widgets[1]],
-                    alignment=ft.MainAxisAlignment.CENTER
+                    [
+                        top_left_container,
+                        ft.Container(expand=True)
+                    ],
+                    alignment=ft.MainAxisAlignment.START
                 ),
-                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                 ft.Row(
                     [
-                        ft.Column(
-                            [self.player_info_widgets[2]],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            expand=1
-                        ),
-                        ft.Column(
-                            [
-                                ft.Row(
-                                    [ft.Text("底牌:", size=14, color=ft.Colors.WHITE), self.bottom_cards_row],
-                                    alignment=ft.MainAxisAlignment.CENTER
-                                ),
-                                ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
-                                ft.Row(
-                                    [ft.Text("当前出牌:", size=14, color=ft.Colors.WHITE)],
-                                    alignment=ft.MainAxisAlignment.CENTER
-                                ),
-                                self.last_played_cards_row,
-                                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
-                                self.message_text,
-                                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
-                                ft.Row(
-                                    [self.start_button, self.play_button, self.pass_button, self.exit_button],
-                                    alignment=ft.MainAxisAlignment.CENTER,
-                                    spacing=20
-                                )
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            expand=2
-                        ),
-                        ft.Column(
-                            [self.player_info_widgets[0]],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            expand=1
-                        )
+                        west_player_container,
+                        center_container,
+                        east_player_container
                     ],
                     expand=True
                 ),
-                ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                 ft.Row(
-                    [
-                        ft.Column(
-                            [
-                                ft.Text("我的手牌:", size=14, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
-                                self.hand_cards_row
-                            ],
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER
-                        )
-                    ],
+                    [south_player_container],
                     alignment=ft.MainAxisAlignment.CENTER
                 )
             ],
@@ -387,21 +483,26 @@ class DoudizhuGameUI:
         
         self.hand_cards_row.update()
     
+    def _show_played_cards_for_player(self, player: DoudizhuPlayer, cards: List[DoudizhuCard]):
+        """在对应玩家的出牌区域显示牌"""
+        player_idx = player.player_id
+        if 0 <= player_idx < len(self.played_cards_widgets):
+            self.played_cards_widgets[player_idx].show_played_cards(cards)
+    
+    def _show_pass_for_player(self, player: DoudizhuPlayer):
+        """在对应玩家的出牌区域显示要不起"""
+        player_idx = player.player_id
+        if 0 <= player_idx < len(self.played_cards_widgets):
+            self.played_cards_widgets[player_idx].show_pass()
+    
+    def _clear_all_played_cards(self):
+        """清除所有玩家的出牌显示"""
+        for widget in self.played_cards_widgets:
+            widget.clear()
+    
     def _update_last_played_cards(self):
-        """更新最后出牌显示"""
-        if not self.game:
-            return
-        
-        self.last_played_cards_row.controls.clear()
-        
-        if self.game.last_played_cards:
-            for card in self.game.last_played_cards:
-                card_widget = CardWidget(card)
-                card_widget.width = 50
-                card_widget.height = 75
-                self.last_played_cards_row.controls.append(card_widget)
-        
-        self.last_played_cards_row.update()
+        """更新最后出牌显示（已废弃，使用_show_played_cards_for_player代替）"""
+        pass
     
     def _update_bottom_cards(self):
         """更新底牌显示"""
@@ -447,7 +548,7 @@ class DoudizhuGameUI:
         
         self._update_player_info()
         self._update_hand_cards()
-        self._update_last_played_cards()
+        self._clear_all_played_cards()
         self._update_bottom_cards()
         
         self.start_button.visible = False
@@ -502,8 +603,8 @@ class DoudizhuGameUI:
         self.pass_button.disabled = True
         
         self.hand_cards_row.controls.clear()
-        self.last_played_cards_row.controls.clear()
         self.bottom_cards_row.controls.clear()
+        self._clear_all_played_cards()
         
         for widget in self.player_info_widgets:
             widget.player = DoudizhuPlayer(widget.player.player_id, f"玩家{widget.player.player_id + 1}")
@@ -515,7 +616,6 @@ class DoudizhuGameUI:
         self.play_button.update()
         self.pass_button.update()
         self.hand_cards_row.update()
-        self.last_played_cards_row.update()
         self.bottom_cards_row.update()
         
         self._show_message("欢迎来到斗地主！点击\"开始游戏\"按钮开始游戏。")
@@ -545,10 +645,10 @@ class DoudizhuGameUI:
         success, message = self.game.play_cards(player, self.selected_cards)
         
         if success:
+            self._show_played_cards_for_player(player, self.selected_cards)
             self._show_message(f"出牌成功: {self.selected_cards}")
             self.selected_cards = []
             self._update_hand_cards()
-            self._update_last_played_cards()
             self._update_player_info()
             
             if self.game.is_game_over():
@@ -567,9 +667,25 @@ class DoudizhuGameUI:
             self._update_player_info()
             self._update_buttons()
             
-            self._ai_play()
+            if self.page:
+                self.page.run_task(self._ai_play)
         else:
             self._show_message(message)
+    
+    async def _pass_turn_async(self, player: DoudizhuPlayer):
+        """异步过牌逻辑"""
+        self._show_pass_for_player(player)
+        self._show_message("不要")
+        self._update_player_info()
+        self._update_buttons()
+        
+        await asyncio.sleep(1)
+        
+        self.game.next_turn()
+        self._update_player_info()
+        self._update_buttons()
+        
+        await self._ai_play()
     
     def _pass_turn(self, e):
         """过牌"""
@@ -585,20 +701,13 @@ class DoudizhuGameUI:
         success, message = self.game.pass_turn(player)
         
         if success:
-            self._show_message("不要")
-            self._update_player_info()
-            self._update_buttons()
-            
-            self.game.next_turn()
-            self._update_player_info()
-            self._update_buttons()
-            
-            self._ai_play()
+            if self.page:
+                self.page.run_task(self._pass_turn_async, player)
         else:
             self._show_message(message)
     
-    def _ai_play(self):
-        """AI出牌"""
+    async def _ai_play(self):
+        """AI出牌（异步版本）"""
         if not self.game:
             return
         
@@ -613,8 +722,8 @@ class DoudizhuGameUI:
             if cards_to_play:
                 success, message = self.game.play_cards(current_player, cards_to_play)
                 if success:
+                    self._show_played_cards_for_player(current_player, cards_to_play)
                     self._show_message(f"{current_player.name} 出牌: {cards_to_play}")
-                    self._update_last_played_cards()
                     self._update_player_info()
                     
                     if self.game.is_game_over():
@@ -634,8 +743,10 @@ class DoudizhuGameUI:
                 if self.game.last_played_cards and self.game.last_played_player != current_player:
                     success, message = self.game.pass_turn(current_player)
                     if success:
+                        self._show_pass_for_player(current_player)
                         self._show_message(f"{current_player.name} 不要")
                         self._update_player_info()
+                        await asyncio.sleep(1)
                 else:
                     pass
             
