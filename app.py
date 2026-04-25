@@ -59,7 +59,7 @@ class CardWidget(ft.Container):
         display_text = self._get_card_display()
         
         self.bgcolor = ft.Colors.WHITE
-        self.border = ft.border.all(2, ft.Colors.BLACK12)
+        self.border = ft.Border.all(2, ft.Colors.BLACK12)
         self.shadow = ft.BoxShadow(
             spread_radius=1,
             blur_radius=3,
@@ -69,7 +69,7 @@ class CardWidget(ft.Container):
         
         if self.selected:
             self.margin = ft.margin.only(top=0, bottom=45)
-            self.border = ft.border.all(3, ft.Colors.BLUE)
+            self.border = ft.Border.all(3, ft.Colors.BLUE)
         else:
             self.margin = ft.margin.only(top=45, bottom=0)
         
@@ -133,7 +133,7 @@ class PlayerInfoWidget(ft.Column):
                 height=60,
                 bgcolor=avatar_color,
                 border_radius=30,
-                border=ft.border.all(3, border_color),
+                border=ft.Border.all(3, border_color),
                 alignment=ft.Alignment(0, 0)
             ),
             ft.Row(
@@ -178,10 +178,10 @@ class DoudizhuGameUI:
         self.hand_cards_row: Optional[ft.Row] = None
         self.message_text: Optional[ft.Text] = None
         self.last_played_cards_row: Optional[ft.Row] = None
-        self.start_button: Optional[ft.ElevatedButton] = None
-        self.play_button: Optional[ft.ElevatedButton] = None
-        self.pass_button: Optional[ft.ElevatedButton] = None
-        self.exit_button: Optional[ft.ElevatedButton] = None
+        self.start_button: Optional[ft.Button] = None
+        self.play_button: Optional[ft.Button] = None
+        self.pass_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
         self.bottom_cards_row: Optional[ft.Row] = None
     
     def main(self, page: ft.Page):
@@ -201,7 +201,7 @@ class DoudizhuGameUI:
     
     def _build_ui(self):
         """构建UI"""
-        self.start_button = ft.ElevatedButton(
+        self.start_button = ft.Button(
             "开始游戏",
             on_click=self._start_game,
             width=150,
@@ -213,7 +213,7 @@ class DoudizhuGameUI:
             )
         )
         
-        self.play_button = ft.ElevatedButton(
+        self.play_button = ft.Button(
             "出牌",
             on_click=self._play_cards,
             width=100,
@@ -226,7 +226,7 @@ class DoudizhuGameUI:
             )
         )
         
-        self.pass_button = ft.ElevatedButton(
+        self.pass_button = ft.Button(
             "不要",
             on_click=self._pass_turn,
             width=100,
@@ -239,7 +239,7 @@ class DoudizhuGameUI:
             )
         )
         
-        self.exit_button = ft.ElevatedButton(
+        self.exit_button = ft.Button(
             "退出",
             on_click=self._exit_game,
             width=100,
@@ -778,7 +778,7 @@ def main():
     
     try:
         game_ui = DoudizhuGameUI()
-        ft.app(target=game_ui.main, view=ft.AppView.WEB_BROWSER)
+        ft.run(game_ui.main, view=ft.AppView.WEB_BROWSER)
     except Exception as e:
         print(f"\n错误: {e}")
         print("\n可能的解决方案:")
