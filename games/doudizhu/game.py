@@ -1,9 +1,13 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 import random
 from typing import Optional
-from public_tinygame.core.base_game import BaseGame
-from public_tinygame.games.doudizhu.card import DoudizhuCard, create_deck
-from public_tinygame.games.doudizhu.player import DoudizhuPlayer, PlayerRole
-from public_tinygame.games.doudizhu.rules import get_card_type, compare_cards, CardType
+from core.base_game import BaseGame
+from games.doudizhu.card import DoudizhuCard, create_deck
+from games.doudizhu.player import DoudizhuPlayer, PlayerRole
+from games.doudizhu.rules import get_card_type, compare_cards, CardType
 
 
 class DoudizhuGame(BaseGame):

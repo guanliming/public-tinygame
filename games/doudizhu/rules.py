@@ -1,6 +1,10 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from collections import Counter
 from typing import Optional
-from public_tinygame.games.doudizhu.card import DoudizhuCard, CardType
+from games.doudizhu.card import DoudizhuCard, CardType
 
 
 def get_card_values(cards: list[DoudizhuCard]) -> list[int]:

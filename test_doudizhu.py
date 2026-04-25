@@ -1,4 +1,9 @@
-from public_tinygame.games.doudizhu import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+
+from games.doudizhu import (
     create_deck, DoudizhuCard, Suit, CardType,
     get_card_type, compare_cards, DoudizhuGame
 )

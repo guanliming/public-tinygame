@@ -1,6 +1,10 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from enum import Enum
 from typing import Optional
-from public_tinygame.core.base_card import BaseCard
+from core.base_card import BaseCard
 
 
 class Suit(Enum):
