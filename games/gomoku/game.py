@@ -44,7 +44,7 @@ class Move:
 class GomokuGame(BaseGame):
     """五子棋游戏类"""
 
-    BOARD_SIZE = 100
+    BOARD_SIZE = 30
     WIN_COUNT = 5
 
     def __init__(self):

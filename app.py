@@ -2467,13 +2467,17 @@ class WhackAMoleGameUI:
 class GomokuGameUI:
     """五子棋游戏界面"""
     
+    CELL_SIZE = 22
+    PIECE_SIZE = 18
+    BOARD_PADDING = 20
+    
     def __init__(self, on_exit=None):
         self.game: Optional[GomokuGame] = None
         self.page: Optional[ft.Page] = None
         self.on_exit = on_exit
         self.ai_task: Optional[asyncio.Task] = None
         
-        self.cell_buttons: List[List[ft.Container]] = []
+        self.board_canvas: Optional[ft.Canvas] = None
         self.status_text: Optional[ft.Text] = None
         self.game_over_message: Optional[ft.Text] = None
         
@@ -2500,14 +2504,14 @@ class GomokuGameUI:
         """构建UI"""
         self.status_text = ft.Text(
             "当前回合: 黑子（玩家）",
-            size=20,
+            size=22,
             color=ft.Colors.WHITE,
             weight=ft.FontWeight.BOLD
         )
         
         self.game_over_message = ft.Text(
             "",
-            size=24,
+            size=26,
             color=ft.Colors.WHITE,
             weight=ft.FontWeight.BOLD
         )
@@ -2583,7 +2587,7 @@ class GomokuGameUI:
                     ),
                     ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "棋盘大小: 100 × 100",
+                        "棋盘大小: 30 × 30",
                         size=18,
                         color=ft.Colors.WHITE
                     ),
@@ -2636,15 +2640,9 @@ class GomokuGameUI:
                     ),
                     ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
                     ft.Container(
-                        content=ft.Column(
-                            [],
-                            scroll=ft.ScrollMode.AUTO,
-                            spacing=0
-                        ),
+                        content=ft.Stack([]),
                         expand=True,
-                        bgcolor=ft.Colors.BROWN_200,
-                        border=ft.Border.all(2, ft.Colors.BROWN_800),
-                        padding=5
+                        alignment=ft.Alignment(0, 0)
                     )
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
@@ -2733,55 +2731,108 @@ class GomokuGameUI:
         self.game.init_game()
         self.game.is_running = True
         
-        self._build_game_grid()
+        self._build_game_board()
         self._update_status()
         
         self._show_game_screen()
     
-    def _build_game_grid(self):
-        """构建游戏网格"""
+    def _build_game_board(self):
+        """构建游戏棋盘"""
         if not self.game or not self.game_screen:
             return
         
-        grid_container = self.game_screen.content.controls[2]
-        column = grid_container.content
-        column.controls.clear()
+        board_container = self.game_screen.content.controls[2]
+        stack = board_container.content
+        stack.controls.clear()
         
-        self.cell_buttons = []
+        board_size = self.game.BOARD_SIZE
+        total_width = board_size * self.CELL_SIZE + self.BOARD_PADDING * 2
+        total_height = board_size * self.CELL_SIZE + self.BOARD_PADDING * 2
         
-        cell_size = 8
+        board_bg = ft.Container(
+            width=total_width,
+            height=total_height,
+            bgcolor=ft.Colors.AMBER_200,
+            border=ft.Border.all(3, ft.Colors.BROWN_800),
+            border_radius=5
+        )
+        stack.controls.append(board_bg)
         
-        for y in range(self.game.BOARD_SIZE):
-            row_controls = []
-            row_buttons = []
-            for x in range(self.game.BOARD_SIZE):
-                cell = ft.Container(
-                    width=cell_size,
-                    height=cell_size,
-                    bgcolor=ft.Colors.BROWN_300,
-                    border=ft.Border.all(0.5, ft.Colors.BROWN_500),
-                    alignment=ft.Alignment(0, 0)
-                )
-                
-                gesture = ft.GestureDetector(
-                    content=cell,
-                    on_tap=lambda e, x=x, y=y: self._on_cell_click(x, y),
-                    data={"x": x, "y": y}
-                )
-                
-                row_controls.append(gesture)
-                row_buttons.append(cell)
-            
-            self.cell_buttons.append(row_buttons)
-            column.controls.append(
-                ft.Row(
-                    row_controls,
-                    spacing=0,
-                    alignment=ft.MainAxisAlignment.CENTER
+        canvas_shapes = []
+        
+        for i in range(board_size):
+            x = self.BOARD_PADDING + i * self.CELL_SIZE
+            y1 = self.BOARD_PADDING
+            y2 = self.BOARD_PADDING + (board_size - 1) * self.CELL_SIZE
+            canvas_shapes.append(
+                ft.Line(
+                    x1=x, y1=y1,
+                    x2=x, y2=y2,
+                    paint=ft.Paint(
+                        stroke_width=1,
+                        color=ft.Colors.BROWN_700
+                    )
                 )
             )
         
-        column.update()
+        for i in range(board_size):
+            y = self.BOARD_PADDING + i * self.CELL_SIZE
+            x1 = self.BOARD_PADDING
+            x2 = self.BOARD_PADDING + (board_size - 1) * self.CELL_SIZE
+            canvas_shapes.append(
+                ft.Line(
+                    x1=x1, y1=y,
+                    x2=x2, y2=y,
+                    paint=ft.Paint(
+                        stroke_width=1,
+                        color=ft.Colors.BROWN_700
+                    )
+                )
+            )
+        
+        star_points = [
+            (3, 3), (3, 15), (3, 27),
+            (15, 3), (15, 15), (15, 27),
+            (27, 3), (27, 15), (27, 27)
+        ]
+        
+        for x, y in star_points:
+            if 0 <= x < board_size and 0 <= y < board_size:
+                cx = self.BOARD_PADDING + x * self.CELL_SIZE
+                cy = self.BOARD_PADDING + y * self.CELL_SIZE
+                canvas_shapes.append(
+                    ft.Circle(
+                        x=cx, y=cy, radius=4,
+                        paint=ft.Paint(
+                            color=ft.Colors.BROWN_800
+                        )
+                    )
+                )
+        
+        self.board_canvas = ft.Canvas(
+            shapes=canvas_shapes,
+            width=total_width,
+            height=total_height
+        )
+        stack.controls.append(self.board_canvas)
+        
+        for y in range(board_size):
+            for x in range(board_size):
+                cell_container = ft.Container(
+                    width=self.CELL_SIZE,
+                    height=self.CELL_SIZE,
+                    left=self.BOARD_PADDING + x * self.CELL_SIZE - self.CELL_SIZE // 2,
+                    top=self.BOARD_PADDING + y * self.CELL_SIZE - self.CELL_SIZE // 2,
+                    on_click=lambda e, x=x, y=y: self._on_cell_click(x, y),
+                    data={"x": x, "y": y}
+                )
+                stack.controls.append(cell_container)
+        
+        self.piece_containers: List[List[Optional[ft.Container]]] = [
+            [None for _ in range(board_size)] for _ in range(board_size)
+        ]
+        
+        board_container.update()
     
     def _update_status(self):
         """更新状态显示"""
@@ -2807,7 +2858,7 @@ class GomokuGameUI:
         
         success = self.game.make_move(x, y)
         
-        self._render_game()
+        self._draw_piece(x, y, PlayerColor.BLACK)
         self._update_status()
         
         if self.game.is_game_over():
@@ -2836,7 +2887,7 @@ class GomokuGameUI:
             x, y = ai_move
             success = self.game.make_move(x, y)
             
-            self._render_game()
+            self._draw_piece(x, y, PlayerColor.WHITE)
             self._update_status()
             
             if self.game.is_game_over():
@@ -2845,38 +2896,40 @@ class GomokuGameUI:
                 else:
                     self._show_game_over_screen(won=False)
     
-    def _render_game(self):
-        """渲染游戏"""
-        if not self.game:
+    def _draw_piece(self, x: int, y: int, color: PlayerColor):
+        """绘制棋子"""
+        if not self.game_screen:
             return
         
-        for y in range(self.game.BOARD_SIZE):
-            for x in range(self.game.BOARD_SIZE):
-                cell = self.cell_buttons[y][x]
-                piece = self.game.board[y][x]
-                
-                if piece is None:
-                    cell.bgcolor = ft.Colors.BROWN_300
-                    cell.content = None
-                elif piece == PlayerColor.BLACK:
-                    cell.bgcolor = ft.Colors.BROWN_300
-                    cell.content = ft.Container(
-                        width=6,
-                        height=6,
-                        bgcolor=ft.Colors.BLACK,
-                        border_radius=3
-                    )
-                elif piece == PlayerColor.WHITE:
-                    cell.bgcolor = ft.Colors.BROWN_300
-                    cell.content = ft.Container(
-                        width=6,
-                        height=6,
-                        bgcolor=ft.Colors.WHITE,
-                        border_radius=3,
-                        border=ft.Border.all(0.5, ft.Colors.GREY)
-                    )
-                
-                cell.update()
+        board_container = self.game_screen.content.controls[2]
+        stack = board_container.content
+        
+        if self.piece_containers[y][x]:
+            stack.controls.remove(self.piece_containers[y][x])
+        
+        piece_color = ft.Colors.BLACK if color == PlayerColor.BLACK else ft.Colors.WHITE
+        border_color = ft.Colors.WHITE if color == PlayerColor.BLACK else ft.Colors.GREY_400
+        
+        piece = ft.Container(
+            width=self.PIECE_SIZE,
+            height=self.PIECE_SIZE,
+            bgcolor=piece_color,
+            border_radius=self.PIECE_SIZE // 2,
+            border=ft.Border.all(1, border_color),
+            left=self.BOARD_PADDING + x * self.CELL_SIZE - self.PIECE_SIZE // 2,
+            top=self.BOARD_PADDING + y * self.CELL_SIZE - self.PIECE_SIZE // 2,
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=3,
+                color=ft.Colors.BLACK54,
+                offset=ft.Offset(1, 1)
+            )
+        )
+        
+        self.piece_containers[y][x] = piece
+        stack.controls.append(piece)
+        
+        board_container.update()
     
     def _restart_game(self, e):
         """重新开始游戏"""
