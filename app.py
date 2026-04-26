@@ -2425,19 +2425,22 @@ class WhackAMoleGameUI:
         if not self.game:
             return
         
-        spawn_task = None
+        import time
+        last_spawn_time = 0
         
         while self.game.is_running:
             self.game.update_time()
             self._update_time()
             
-            if spawn_task is None or spawn_task.done():
+            current_time = time.time()
+            if current_time - last_spawn_time >= 1.0:
                 new_holes = self.game.spawn_squirrels()
                 for hole_idx in new_holes:
                     self._render_hole(hole_idx)
                 
                 if new_holes:
-                    spawn_task = self.page.run_task(self._hide_squirrels_delayed, new_holes.copy())
+                    self.page.run_task(self._hide_squirrels_delayed, new_holes.copy())
+                    last_spawn_time = current_time
             
             if self.game.game_over:
                 self._show_game_over_screen(won=False)
