@@ -6386,6 +6386,13 @@ class GameSelector:
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [racing_button, racing_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -6405,6 +6412,13 @@ class GameSelector:
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [sudoku_button, sudoku_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -6412,13 +6426,6 @@ class GameSelector:
                     ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
                     ft.Row(
                         [
-                            ft.Column(
-                                [sudoku_button, sudoku_desc],
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=10
-                            ),
-                            ft.Container(width=40),
                             ft.Column(
                                 [junqi_button, junqi_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
@@ -6428,18 +6435,6 @@ class GameSelector:
                             ft.Container(width=40),
                             ft.Column(
                                 [huarongdao_button, huarongdao_desc],
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=10
-                            )
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER
-                    ),
-                    ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
-                    ft.Row(
-                        [
-                            ft.Column(
-                                [racing_button, racing_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
