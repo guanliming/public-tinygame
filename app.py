@@ -5114,13 +5114,8 @@ class GameSelector:
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
-                            )
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER
-                    ),
-                    ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
-                    ft.Row(
-                        [
+                            ),
+                            ft.Container(width=40),
                             ft.Column(
                                 [junqi_button, junqi_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
