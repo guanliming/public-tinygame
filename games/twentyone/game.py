@@ -65,10 +65,10 @@ class TwentyOneGame(BaseGame):
                     ('*', a * b),
                 ]
                 
-                if b != 0:
-                    ops.append(('/', a / b))
-                if a != 0:
-                    ops.append(('/', b / a))
+                if b != 0 and a % b == 0:
+                    ops.append(('/', a // b))
+                if a != 0 and b % a == 0:
+                    ops.append(('/', b // a))
 
                 for op_symbol, result in ops:
                     new_numbers = remaining + [result]
@@ -85,7 +85,7 @@ class TwentyOneGame(BaseGame):
                                 else:
                                     expr = f"({b} - {a})"
                             elif op_symbol == '/':
-                                if abs(result - a / b) < 1e-6:
+                                if result == a // b:
                                     expr = f"({a} / {b})"
                                 else:
                                     expr = f"({b} / {a})"
