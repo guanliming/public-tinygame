@@ -11,6 +11,7 @@ from games.doudizhu import (
 )
 from games.snake import SnakeGame, Direction, Position
 from games.twentyone import TwentyOneGame
+from games.minesweeper import MinesweeperGame, CellState
 
 
 class TwentyOneGameUI:
@@ -1558,6 +1559,450 @@ class DoudizhuGameUI:
         return straights
 
 
+class MinesweeperGameUI:
+    """扫雷游戏界面"""
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[MinesweeperGame] = None
+        self.page: Optional[ft.Page] = None
+        self.on_exit = on_exit
+        
+        self.cell_buttons: List[List[ft.Container]] = []
+        self.status_text: Optional[ft.Text] = None
+        self.game_over_score_text: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.start_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+    
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _get_number_color(self, count: int) -> str:
+        """根据数字获取颜色"""
+        colors = {
+            1: ft.Colors.BLUE,
+            2: ft.Colors.GREEN,
+            3: ft.Colors.RED,
+            4: ft.Colors.PURPLE,
+            5: ft.Colors.BROWN,
+            6: ft.Colors.CYAN,
+            7: ft.Colors.BLACK,
+            8: ft.Colors.GREY
+        }
+        return colors.get(count, ft.Colors.BLACK)
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.status_text = ft.Text(
+            "剩余: 250 个地雷",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_score_text = ft.Text(
+            "",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.start_button = ft.Button(
+            "开始游戏",
+            on_click=self._start_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "扫雷游戏",
+                        size=48,
+                        color=ft.Colors.YELLOW,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "棋盘大小: 50 × 50",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "地雷数量: 250 个",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "左键: 翻开格子",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "右键: 标记/取消问号",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "翻开所有非地雷格子即可获胜",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=20
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.status_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Container(
+                        content=ft.Column(
+                            [],
+                            scroll=ft.ScrollMode.AUTO,
+                            spacing=0
+                        ),
+                        width=800,
+                        height=550,
+                        bgcolor=ft.Colors.GREY_800,
+                        border=ft.Border.all(2, ft.Colors.WHITE),
+                        padding=5
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_score_text,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_score_text.value = "你成功翻开了所有安全格子！"
+        else:
+            self.game_over_screen.content.controls[0].value = "游戏结束"
+            self.game_over_screen.content.controls[0].color = ft.Colors.RED
+            self.game_over_score_text.value = "很遗憾，你踩到了地雷！"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _start_game(self, e):
+        """开始游戏"""
+        self.game = MinesweeperGame()
+        self.game.init_game()
+        self.game.is_running = True
+        
+        self._build_game_grid()
+        self._update_status()
+        
+        self._show_game_screen()
+    
+    def _build_game_grid(self):
+        """构建游戏网格"""
+        if not self.game or not self.game_screen:
+            return
+        
+        grid_container = self.game_screen.content.controls[2]
+        column = grid_container.content
+        column.controls.clear()
+        
+        self.cell_buttons = []
+        
+        cell_size = 10
+        
+        for y in range(self.game.GRID_HEIGHT):
+            row_controls = []
+            row_buttons = []
+            for x in range(self.game.GRID_WIDTH):
+                cell = ft.Container(
+                    width=cell_size,
+                    height=cell_size,
+                    bgcolor=ft.Colors.GREY_500,
+                    border=ft.Border.all(1, ft.Colors.GREY_700),
+                    alignment=ft.Alignment(0, 0)
+                )
+                
+                gesture = ft.GestureDetector(
+                    content=cell,
+                    on_tap=lambda e, x=x, y=y: self._on_left_click(x, y),
+                    on_secondary_tap=lambda e, x=x, y=y: self._on_right_click(x, y),
+                    data={"x": x, "y": y}
+                )
+                
+                row_controls.append(gesture)
+                row_buttons.append(cell)
+            
+            self.cell_buttons.append(row_buttons)
+            column.controls.append(
+                ft.Row(
+                    row_controls,
+                    spacing=0,
+                    alignment=ft.MainAxisAlignment.CENTER
+                )
+            )
+        
+        column.update()
+    
+    def _update_status(self):
+        """更新状态显示"""
+        if self.game:
+            remaining = self.game.MINE_COUNT - self.game.revealed_count
+            self.status_text.value = f"已翻开: {self.game.revealed_count} 格"
+            self.status_text.update()
+    
+    def _on_left_click(self, x: int, y: int):
+        """左击事件"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        continue_game = self.game.left_click(x, y)
+        
+        self._render_game()
+        self._update_status()
+        
+        if not continue_game:
+            if self.game.won:
+                self._show_game_over_screen(won=True)
+            else:
+                self._reveal_all_mines()
+                self._show_game_over_screen(won=False)
+    
+    def _on_right_click(self, x: int, y: int):
+        """右击事件"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        self.game.right_click(x, y)
+        self._render_game()
+    
+    def _render_game(self):
+        """渲染游戏"""
+        if not self.game:
+            return
+        
+        for y in range(self.game.GRID_HEIGHT):
+            for x in range(self.game.GRID_WIDTH):
+                cell = self.cell_buttons[y][x]
+                state = self.game.cell_states[x][y]
+                
+                if state == CellState.HIDDEN:
+                    cell.bgcolor = ft.Colors.GREY_500
+                    cell.content = None
+                elif state == CellState.QUESTIONED:
+                    cell.bgcolor = ft.Colors.YELLOW_300
+                    cell.content = ft.Text("?", size=8, color=ft.Colors.BLACK, weight=ft.FontWeight.BOLD)
+                elif state == CellState.REVEALED:
+                    if self.game.grid[x][y]:
+                        cell.bgcolor = ft.Colors.RED
+                        cell.content = ft.Text("💣", size=8)
+                    else:
+                        mine_count = self.game.get_adjacent_mine_count(x, y)
+                        cell.bgcolor = ft.Colors.GREY_200
+                        if mine_count > 0:
+                            cell.content = ft.Text(
+                                str(mine_count),
+                                size=8,
+                                color=self._get_number_color(mine_count),
+                                weight=ft.FontWeight.BOLD
+                            )
+                        else:
+                            cell.content = None
+                
+                cell.update()
+    
+    def _reveal_all_mines(self):
+        """揭示所有地雷"""
+        if not self.game:
+            return
+        
+        for y in range(self.game.GRID_HEIGHT):
+            for x in range(self.game.GRID_WIDTH):
+                cell = self.cell_buttons[y][x]
+                
+                if self.game.grid[x][y]:
+                    cell.bgcolor = ft.Colors.RED
+                    cell.content = ft.Text("💣", size=8)
+                elif self.game.cell_states[x][y] == CellState.HIDDEN:
+                    cell.bgcolor = ft.Colors.GREY_200
+                    mine_count = self.game.get_adjacent_mine_count(x, y)
+                    if mine_count > 0:
+                        cell.content = ft.Text(
+                            str(mine_count),
+                            size=8,
+                            color=self._get_number_color(mine_count),
+                            weight=ft.FontWeight.BOLD
+                        )
+                    else:
+                        cell.content = None
+                
+                cell.update()
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        self.game = None
+        self._exit_to_selector(e)
+
+
 class GameSelector:
     """游戏选择页面"""
     
@@ -1648,6 +2093,24 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
+        minesweeper_button = ft.Button(
+            "💣 扫雷",
+            on_click=self._start_minesweeper_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.YELLOW_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        minesweeper_desc = ft.Text(
+            "经典扫雷游戏，50×50 棋盘，250 个地雷",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -1674,6 +2137,18 @@ class GameSelector:
                             ft.Container(width=40),
                             ft.Column(
                                 [twentyone_button, twentyone_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            )
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [
+                            ft.Column(
+                                [minesweeper_button, minesweeper_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
@@ -1767,6 +2242,28 @@ class GameSelector:
         self.page.bgcolor = ft.Colors.PURPLE_900
         self.page.window_width = 800
         self.page.window_height = 600
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
+    
+    def _start_minesweeper_game(self, e):
+        """启动扫雷游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = MinesweeperGameUI(on_exit=on_exit)
+        
+        self.page.title = "扫雷游戏"
+        self.page.bgcolor = ft.Colors.BLUE_GREY_800
+        self.page.window_width = 900
+        self.page.window_height = 700
         
         self.current_game_ui = game_ui
         game_content = game_ui.build(self.page)
