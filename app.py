@@ -43,8 +43,8 @@ class TetrisGameUI:
         self.exit_button: Optional[ft.Button] = None
         self.game_exit_button: Optional[ft.Button] = None
         
-        self.CELL_SIZE = 25
-        self.NEXT_CELL_SIZE = 15
+        self.CELL_SIZE = 35
+        self.NEXT_CELL_SIZE = 20
     
     def build(self, page: ft.Page):
         """构建并返回UI控件"""
@@ -81,7 +81,7 @@ class TetrisGameUI:
         )
         
         self.controls_help_text = ft.Text(
-            "方向键 ←→ 移动 | F 旋转 | S 加速 | 空格 暂停",
+            "A/D 移动 | F 旋转 | S 加速下落 | 空格 暂停",
             size=14,
             color=ft.Colors.GREY_400
         )
@@ -98,8 +98,8 @@ class TetrisGameUI:
         )
         
         self.next_container = ft.Container(
-            width=120,
-            height=120,
+            width=160,
+            height=160,
             bgcolor=ft.Colors.GREY_900,
             border=ft.Border.all(2, ft.Colors.GREY_600),
             alignment=ft.Alignment(0, 0),
@@ -183,7 +183,12 @@ class TetrisGameUI:
                     ),
                     ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "← → 方向键：左右移动",
+                        "A 键：向左移动",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "D 键：向右移动",
                         size=16,
                         color=ft.Colors.GREY_400
                     ),
@@ -457,8 +462,8 @@ class TetrisGameUI:
         piece_width = (max_x - min_x + 1) * self.NEXT_CELL_SIZE
         piece_height = (max_y - min_y + 1) * self.NEXT_CELL_SIZE
         
-        container_width = 120
-        container_height = 120
+        container_width = 160
+        container_height = 160
         
         offset_x = (container_width - piece_width) // 2 - min_x * self.NEXT_CELL_SIZE
         offset_y = (container_height - piece_height) // 2 - min_y * self.NEXT_CELL_SIZE
@@ -497,17 +502,25 @@ class TetrisGameUI:
         if self.game.is_paused:
             return
         
-        if key == "Arrow Left":
+        if key.lower() == "a":
             self.game.move_left()
             self._render_game()
-        elif key == "Arrow Right":
+        elif key.lower() == "d":
             self.game.move_right()
             self._render_game()
         elif key.lower() == "f":
             self.game.rotate()
             self._render_game()
         elif key.lower() == "s":
-            self.game.fast_fall = True
+            moved = self.game.move_down()
+            self._update_score()
+            self._render_game()
+            if not moved:
+                self._render_next_piece()
+                if self.game.game_over:
+                    self._show_game_over_screen(won=False)
+                elif self.game.won:
+                    self._show_game_over_screen(won=True)
     
     async def _game_loop(self):
         """游戏主循环"""
@@ -519,8 +532,7 @@ class TetrisGameUI:
                 await asyncio.sleep(0.1)
                 continue
             
-            speed = self.game.FAST_FALL_SPEED if self.game.fast_fall else self.game.FALL_SPEED
-            await asyncio.sleep(speed)
+            await asyncio.sleep(self.game.FALL_SPEED)
             
             if not self.game.is_running:
                 break
@@ -529,9 +541,6 @@ class TetrisGameUI:
                 continue
             
             moved = self.game.move_down()
-            
-            if self.game.fast_fall:
-                self.game.fast_fall = False
             
             self._update_score()
             self._render_game()
@@ -3751,8 +3760,8 @@ class GameSelector:
         
         self.page.title = "俄罗斯方块游戏"
         self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 600
-        self.page.window_height = 700
+        self.page.window_width = 750
+        self.page.window_height = 850
         
         self.current_game_ui = game_ui
         game_content = game_ui.build(self.page)
