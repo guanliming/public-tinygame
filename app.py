@@ -13,6 +13,7 @@ from games.snake import SnakeGame, Direction, Position
 from games.twentyone import TwentyOneGame
 from games.minesweeper import MinesweeperGame, CellState
 from games.whackamole import WhackAMoleGame, HoleState
+from games.gomoku import GomokuGame, PlayerColor
 
 
 class TwentyOneGameUI:
@@ -2463,6 +2464,453 @@ class WhackAMoleGameUI:
                     self._render_hole(hole_idx)
 
 
+class GomokuGameUI:
+    """五子棋游戏界面"""
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[GomokuGame] = None
+        self.page: Optional[ft.Page] = None
+        self.on_exit = on_exit
+        self.ai_task: Optional[asyncio.Task] = None
+        
+        self.cell_buttons: List[List[ft.Container]] = []
+        self.status_text: Optional[ft.Text] = None
+        self.game_over_message: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.start_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+    
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.status_text = ft.Text(
+            "当前回合: 黑子（玩家）",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_message = ft.Text(
+            "",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.start_button = ft.Button(
+            "开始游戏",
+            on_click=self._start_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "五子棋游戏",
+                        size=48,
+                        color=ft.Colors.AMBER,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "棋盘大小: 100 × 100",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "玩家: 黑子（先手）",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "机器人: 白子",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "谁先在横竖斜方向连成5颗相同颜色的棋子算赢",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "超过5颗不算赢",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "点击棋盘放置棋子",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.status_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Container(
+                        content=ft.Column(
+                            [],
+                            scroll=ft.ScrollMode.AUTO,
+                            spacing=0
+                        ),
+                        expand=True,
+                        bgcolor=ft.Colors.BROWN_200,
+                        border=ft.Border.all(2, ft.Colors.BROWN_800),
+                        padding=5
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_message,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_message.value = "你赢了！五子连珠！"
+        else:
+            self.game_over_screen.content.controls[0].value = "游戏结束"
+            self.game_over_screen.content.controls[0].color = ft.Colors.RED
+            self.game_over_message.value = "机器人赢了！"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _start_game(self, e):
+        """开始游戏"""
+        self.game = GomokuGame()
+        self.game.init_game()
+        self.game.is_running = True
+        
+        self._build_game_grid()
+        self._update_status()
+        
+        self._show_game_screen()
+    
+    def _build_game_grid(self):
+        """构建游戏网格"""
+        if not self.game or not self.game_screen:
+            return
+        
+        grid_container = self.game_screen.content.controls[2]
+        column = grid_container.content
+        column.controls.clear()
+        
+        self.cell_buttons = []
+        
+        cell_size = 8
+        
+        for y in range(self.game.BOARD_SIZE):
+            row_controls = []
+            row_buttons = []
+            for x in range(self.game.BOARD_SIZE):
+                cell = ft.Container(
+                    width=cell_size,
+                    height=cell_size,
+                    bgcolor=ft.Colors.BROWN_300,
+                    border=ft.Border.all(0.5, ft.Colors.BROWN_500),
+                    alignment=ft.Alignment(0, 0)
+                )
+                
+                gesture = ft.GestureDetector(
+                    content=cell,
+                    on_tap=lambda e, x=x, y=y: self._on_cell_click(x, y),
+                    data={"x": x, "y": y}
+                )
+                
+                row_controls.append(gesture)
+                row_buttons.append(cell)
+            
+            self.cell_buttons.append(row_buttons)
+            column.controls.append(
+                ft.Row(
+                    row_controls,
+                    spacing=0,
+                    alignment=ft.MainAxisAlignment.CENTER
+                )
+            )
+        
+        column.update()
+    
+    def _update_status(self):
+        """更新状态显示"""
+        if self.game:
+            if self.game.current_player == PlayerColor.BLACK:
+                self.status_text.value = "当前回合: 黑子（玩家）"
+                self.status_text.color = ft.Colors.BLACK
+            else:
+                self.status_text.value = "当前回合: 白子（机器人）"
+                self.status_text.color = ft.Colors.WHITE
+            self.status_text.update()
+    
+    def _on_cell_click(self, x: int, y: int):
+        """格子点击事件"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        if self.game.current_player != PlayerColor.BLACK:
+            return
+        
+        if not self.game.is_valid_move(x, y):
+            return
+        
+        success = self.game.make_move(x, y)
+        
+        self._render_game()
+        self._update_status()
+        
+        if self.game.is_game_over():
+            if self.game.winner == PlayerColor.BLACK:
+                self._show_game_over_screen(won=True)
+            else:
+                self._show_game_over_screen(won=False)
+            return
+        
+        if self.page:
+            self.ai_task = self.page.run_task(self._ai_move_delayed)
+    
+    async def _ai_move_delayed(self):
+        """AI延迟走棋"""
+        await asyncio.sleep(1)
+        
+        if not self.game or not self.game.is_running:
+            return
+        
+        if self.game.current_player != PlayerColor.WHITE:
+            return
+        
+        ai_move = self.game.get_ai_move()
+        
+        if ai_move:
+            x, y = ai_move
+            success = self.game.make_move(x, y)
+            
+            self._render_game()
+            self._update_status()
+            
+            if self.game.is_game_over():
+                if self.game.winner == PlayerColor.BLACK:
+                    self._show_game_over_screen(won=True)
+                else:
+                    self._show_game_over_screen(won=False)
+    
+    def _render_game(self):
+        """渲染游戏"""
+        if not self.game:
+            return
+        
+        for y in range(self.game.BOARD_SIZE):
+            for x in range(self.game.BOARD_SIZE):
+                cell = self.cell_buttons[y][x]
+                piece = self.game.board[y][x]
+                
+                if piece is None:
+                    cell.bgcolor = ft.Colors.BROWN_300
+                    cell.content = None
+                elif piece == PlayerColor.BLACK:
+                    cell.bgcolor = ft.Colors.BROWN_300
+                    cell.content = ft.Container(
+                        width=6,
+                        height=6,
+                        bgcolor=ft.Colors.BLACK,
+                        border_radius=3
+                    )
+                elif piece == PlayerColor.WHITE:
+                    cell.bgcolor = ft.Colors.BROWN_300
+                    cell.content = ft.Container(
+                        width=6,
+                        height=6,
+                        bgcolor=ft.Colors.WHITE,
+                        border_radius=3,
+                        border=ft.Border.all(0.5, ft.Colors.GREY)
+                    )
+                
+                cell.update()
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        if self.ai_task and not self.ai_task.done():
+            self.ai_task.cancel()
+        
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        if self.ai_task and not self.ai_task.done():
+            self.ai_task.cancel()
+        
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.ai_task and not self.ai_task.done():
+            self.ai_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.ai_task and not self.ai_task.done():
+            self.ai_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
+
+
 class GameSelector:
     """游戏选择页面"""
     
@@ -2589,6 +3037,24 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
+        gomoku_button = ft.Button(
+            "⚫ 五子棋",
+            on_click=self._start_gomoku_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BROWN_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        gomoku_desc = ft.Text(
+            "经典五子棋，100×100棋盘，人机对战",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -2634,6 +3100,18 @@ class GameSelector:
                             ft.Container(width=40),
                             ft.Column(
                                 [whackamole_button, whackamole_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            )
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [
+                            ft.Column(
+                                [gomoku_button, gomoku_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
@@ -2771,6 +3249,28 @@ class GameSelector:
         self.page.bgcolor = ft.Colors.GREEN_900
         self.page.window_width = 850
         self.page.window_height = 700
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
+    
+    def _start_gomoku_game(self, e):
+        """启动五子棋游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = GomokuGameUI(on_exit=on_exit)
+        
+        self.page.title = "五子棋游戏"
+        self.page.bgcolor = ft.Colors.BROWN_900
+        self.page.window_width = 900
+        self.page.window_height = 800
         
         self.current_game_ui = game_ui
         game_content = game_ui.build(self.page)
