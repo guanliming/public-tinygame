@@ -18,6 +18,7 @@ from games.tetris import TetrisGame
 from games.sudoku import SudokuGame as SudokuGameCore, CellState as SudokuCellState
 from games.junqi import JunqiGame, PlayerSide, PieceType, Position, Piece, Move
 from games.huarongdao import HuarongdaoGame
+from games.racing import RacingGame, Obstacle, RoadLine
 
 
 class HuarongdaoGameUI:
@@ -5569,6 +5570,540 @@ class JunqiGameUI:
         self._exit_to_selector(e)
 
 
+class RacingGameUI:
+    """赛车游戏界面"""
+    
+    GAME_WIDTH = 300
+    GAME_HEIGHT = 600
+    PLAYER_WIDTH = 40
+    PLAYER_HEIGHT = 60
+    LANE_WIDTH = GAME_WIDTH // RacingGame.LANE_COUNT
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[RacingGame] = None
+        self.page: Optional[ft.Page] = None
+        self.game_task: Optional[asyncio.Task] = None
+        self.on_exit = on_exit
+        
+        self.game_container: Optional[ft.Container] = None
+        self.speed_text: Optional[ft.Text] = None
+        self.time_text: Optional[ft.Text] = None
+        self.game_over_message: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.start_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+        
+        self.keys_pressed = set()
+        self.last_update_time = 0
+        
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        page.on_keyboard_event = self._on_keyboard_event
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.speed_text = ft.Text(
+            "车速: 0 km/h",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.time_text = ft.Text(
+            "时间: 0.0 / 30.0 秒",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_message = ft.Text(
+            "",
+            size=26,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.start_button = ft.Button(
+            "开始游戏",
+            on_click=self._start_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BLUE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BLUE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "🏎️ 极速赛车",
+                        size=48,
+                        color=ft.Colors.BLUE_400,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "经典赛车躲避游戏",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "A 键：向左移动",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "D 键：向右移动",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "J 键：按住加速（最大150 km/h）",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Text(
+                        "松开 J 键：车速逐渐下降",
+                        size=16,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "躲避前方障碍物，坚持 30 秒即可获胜！",
+                        size=16,
+                        color=ft.Colors.BLUE_400
+                    ),
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_container = ft.Container(
+            width=self.GAME_WIDTH,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.GREY_800,
+            border=ft.Border.all(3, ft.Colors.WHITE),
+            content=ft.Stack([])
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.speed_text, ft.Container(expand=True), self.time_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.game_container],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_message,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "🎉 恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_message.value = f"太棒了！你坚持了 {self.game.game_time:.1f} 秒！"
+        else:
+            self.game_over_screen.content.controls[0].value = "💥 游戏结束"
+            self.game_over_screen.content.controls[0].color = ft.Colors.RED
+            self.game_over_message.value = f"很遗憾！你坚持了 {self.game.game_time:.1f} 秒"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _start_game(self, e):
+        """开始游戏"""
+        import time
+        self.game = RacingGame()
+        self.game.init_game()
+        self.game.is_running = True
+        self.keys_pressed = set()
+        self.last_update_time = time.time()
+        
+        self._update_speed()
+        self._update_time()
+        
+        self._show_game_screen()
+        
+        if self.page:
+            self.game_task = self.page.run_task(self._game_loop)
+    
+    def _on_keyboard_event(self, e):
+        """键盘事件处理"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        key = e.key.lower()
+        is_pressed = not hasattr(e, 'type') or e.type != 'keyup'
+        
+        if is_pressed:
+            self.keys_pressed.add(key)
+        else:
+            self.keys_pressed.discard(key)
+        
+        if key == 'a' and is_pressed:
+            self.game.move_left()
+        elif key == 'd' and is_pressed:
+            self.game.move_right()
+        elif key == 'j':
+            self.game.set_accelerating(is_pressed)
+    
+    def _update_speed(self):
+        """更新速度显示"""
+        if self.game:
+            speed_text = f"车速: {int(self.game.speed)} km/h"
+            self.speed_text.value = speed_text
+            
+            if self.game.speed >= 120:
+                self.speed_text.color = ft.Colors.RED
+            elif self.game.speed >= 80:
+                self.speed_text.color = ft.Colors.ORANGE
+            else:
+                self.speed_text.color = ft.Colors.WHITE
+            
+            self.speed_text.update()
+    
+    def _update_time(self):
+        """更新时间显示"""
+        if self.game:
+            remaining = RacingGame.WIN_TIME - self.game.game_time
+            time_text = f"时间: {self.game.game_time:.1f} / {RacingGame.WIN_TIME} 秒"
+            self.time_text.value = time_text
+            
+            if remaining <= 5:
+                self.time_text.color = ft.Colors.GREEN
+            else:
+                self.time_text.color = ft.Colors.WHITE
+            
+            self.time_text.update()
+    
+    def _render_game(self):
+        """渲染游戏"""
+        if not self.game or not self.game_container:
+            return
+        
+        stack = self.game_container.content
+        stack.controls.clear()
+        
+        road_bg = ft.Container(
+            width=self.GAME_WIDTH,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.GREY_700
+        )
+        stack.controls.append(road_bg)
+        
+        for i in range(1, RacingGame.LANE_COUNT):
+            lane_x = i * self.LANE_WIDTH
+            lane_line = ft.Container(
+                width=2,
+                height=self.GAME_HEIGHT,
+                bgcolor=ft.Colors.WHITE30,
+                left=lane_x - 1
+            )
+            stack.controls.append(lane_line)
+        
+        for line in self.game.road_lines:
+            for i in range(1, RacingGame.LANE_COUNT):
+                lane_x = i * self.LANE_WIDTH - 3
+                line_rect = ft.Container(
+                    width=6,
+                    height=line.height,
+                    bgcolor=ft.Colors.WHITE,
+                    left=lane_x,
+                    top=line.y
+                )
+                stack.controls.append(line_rect)
+        
+        left_border = ft.Container(
+            width=4,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.WHITE,
+            left=0
+        )
+        right_border = ft.Container(
+            width=4,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.WHITE,
+            left=self.GAME_WIDTH - 4
+        )
+        stack.controls.append(left_border)
+        stack.controls.append(right_border)
+        
+        for obstacle in self.game.obstacles:
+            obs_x = obstacle.lane * self.LANE_WIDTH + (self.LANE_WIDTH - obstacle.width) // 2
+            
+            if obstacle.type.value == 1:
+                obs_color = ft.Colors.RED
+            elif obstacle.type.value == 2:
+                obs_color = ft.Colors.ORANGE
+            else:
+                obs_color = ft.Colors.GREY_500
+            
+            obs = ft.Container(
+                width=obstacle.width,
+                height=obstacle.height,
+                bgcolor=obs_color,
+                border_radius=5,
+                border=ft.Border.all(2, ft.Colors.BLACK38),
+                left=obs_x,
+                top=obstacle.y,
+                shadow=ft.BoxShadow(
+                    spread_radius=1,
+                    blur_radius=5,
+                    color=ft.Colors.BLACK54,
+                    offset=ft.Offset(2, 2)
+                )
+            )
+            
+            if obstacle.type.value == 1 or obstacle.type.value == 2:
+                window = ft.Container(
+                    width=obstacle.width - 10,
+                    height=15,
+                    bgcolor=ft.Colors.LIGHT_BLUE_200,
+                    left=5,
+                    top=5,
+                    border_radius=3
+                )
+                obs.content = window
+            
+            stack.controls.append(obs)
+        
+        player_x = self.game.get_player_x()
+        
+        player = ft.Container(
+            width=self.PLAYER_WIDTH,
+            height=self.PLAYER_HEIGHT,
+            bgcolor=ft.Colors.BLUE_500,
+            border_radius=8,
+            border=ft.Border.all(2, ft.Colors.BLUE_700),
+            left=player_x,
+            top=self.game.player_y,
+            shadow=ft.BoxShadow(
+                spread_radius=2,
+                blur_radius=8,
+                color=ft.Colors.BLACK54,
+                offset=ft.Offset(3, 3)
+            )
+        )
+        
+        windshield = ft.Container(
+            width=self.PLAYER_WIDTH - 10,
+            height=15,
+            bgcolor=ft.Colors.LIGHT_BLUE_200,
+            left=5,
+            top=self.PLAYER_HEIGHT - 20,
+            border_radius=3
+        )
+        player.content = windshield
+        
+        stack.controls.append(player)
+        
+        self.game_container.update()
+    
+    async def _game_loop(self):
+        """游戏主循环"""
+        import time
+        
+        if not self.game:
+            return
+        
+        last_time = time.time()
+        
+        while self.game.is_running:
+            current_time = time.time()
+            delta_time = current_time - last_time
+            last_time = current_time
+            
+            continue_game = self.game.update(delta_time)
+            
+            self._update_speed()
+            self._update_time()
+            self._render_game()
+            
+            if not continue_game:
+                if self.game.won:
+                    self._show_game_over_screen(won=True)
+                else:
+                    self._show_game_over_screen(won=False)
+                break
+            
+            await asyncio.sleep(0.016)
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
+
+
 class GameSelector:
     """游戏选择页面"""
     
@@ -5785,6 +6320,24 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
+        racing_button = ft.Button(
+            "🏎️ 极速赛车",
+            on_click=self._start_racing_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BLUE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        racing_desc = ft.Text(
+            "A/D 左右移动，J 加速，躲避障碍物坚持30秒获胜",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -5875,6 +6428,18 @@ class GameSelector:
                             ft.Container(width=40),
                             ft.Column(
                                 [huarongdao_button, huarongdao_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            )
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [
+                            ft.Column(
+                                [racing_button, racing_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
@@ -6122,6 +6687,28 @@ class GameSelector:
         self.page.bgcolor = ft.Colors.BLUE_GREY_900
         self.page.window_width = 800
         self.page.window_height = 850
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
+    
+    def _start_racing_game(self, e):
+        """启动赛车游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = RacingGameUI(on_exit=on_exit)
+        
+        self.page.title = "极速赛车游戏"
+        self.page.bgcolor = ft.Colors.BLUE_GREY_900
+        self.page.window_width = 500
+        self.page.window_height = 750
         
         self.current_game_ui = game_ui
         game_content = game_ui.build(self.page)
