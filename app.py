@@ -21,7 +21,8 @@ class SnakeGameUI:
         self.game_task: Optional[asyncio.Task] = None
         
         self.game_container: Optional[ft.Container] = None
-        self.score_text: Optional[ft.Text] = None
+        self.game_score_text: Optional[ft.Text] = None
+        self.game_over_score_text: Optional[ft.Text] = None
         self.message_text: Optional[ft.Text] = None
         
         self.welcome_screen: Optional[ft.Container] = None
@@ -51,7 +52,14 @@ class SnakeGameUI:
     
     def _build_ui(self):
         """构建UI"""
-        self.score_text = ft.Text(
+        self.game_score_text = ft.Text(
+            "分数: 0",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_score_text = ft.Text(
             "分数: 0",
             size=24,
             color=ft.Colors.WHITE,
@@ -152,7 +160,7 @@ class SnakeGameUI:
             content=ft.Column(
                 [
                     ft.Row(
-                        [self.score_text],
+                        [self.game_score_text],
                         alignment=ft.MainAxisAlignment.CENTER
                     ),
                     ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
@@ -183,7 +191,7 @@ class SnakeGameUI:
                         weight=ft.FontWeight.BOLD
                     ),
                     ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
-                    self.score_text,
+                    self.game_over_score_text,
                     ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
                     ft.Row(
                         [self.restart_button, self.back_button],
@@ -276,8 +284,11 @@ class SnakeGameUI:
     def _update_score(self):
         """更新分数显示"""
         if self.game:
-            self.score_text.value = f"分数: {self.game.score}"
-            self.score_text.update()
+            score_text = f"分数: {self.game.score}"
+            self.game_score_text.value = score_text
+            self.game_over_score_text.value = score_text
+            self.game_score_text.update()
+            self.game_over_score_text.update()
     
     def _render_game(self):
         """渲染游戏"""
