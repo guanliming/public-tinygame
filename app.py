@@ -45,6 +45,7 @@ class TetrisGameUI:
         
         self.CELL_SIZE = 35
         self.NEXT_CELL_SIZE = 20
+        self.fast_fall: bool = False
     
     def build(self, page: ft.Page):
         """构建并返回UI控件"""
@@ -512,15 +513,7 @@ class TetrisGameUI:
             self.game.rotate()
             self._render_game()
         elif key.lower() == "s":
-            moved = self.game.move_down()
-            self._update_score()
-            self._render_game()
-            if not moved:
-                self._render_next_piece()
-                if self.game.game_over:
-                    self._show_game_over_screen(won=False)
-                elif self.game.won:
-                    self._show_game_over_screen(won=True)
+            self.fast_fall = True
     
     async def _game_loop(self):
         """游戏主循环"""
@@ -532,7 +525,8 @@ class TetrisGameUI:
                 await asyncio.sleep(0.1)
                 continue
             
-            await asyncio.sleep(self.game.FALL_SPEED)
+            speed = self.game.FAST_FALL_SPEED if self.fast_fall else self.game.FALL_SPEED
+            await asyncio.sleep(speed)
             
             if not self.game.is_running:
                 break
@@ -546,6 +540,7 @@ class TetrisGameUI:
             self._render_game()
             
             if not moved:
+                self.fast_fall = False
                 self._render_next_piece()
             
             if self.game.game_over:
