@@ -49,8 +49,8 @@ class HuarongdaoGameUI:
         
         self.board_stack: Optional[ft.Stack] = None
         self.dragging_cell: Optional[Tuple[int, int]] = None
-        self.drag_start_x: float = 0
-        self.drag_start_y: float = 0
+        self.drag_accumulated_x: float = 0
+        self.drag_accumulated_y: float = 0
         self.original_left: float = 0
         self.original_top: float = 0
     
@@ -455,8 +455,8 @@ class HuarongdaoGameUI:
             return
         
         self.dragging_cell = (row, col)
-        self.drag_start_x = e.local_x
-        self.drag_start_y = e.local_y
+        self.drag_accumulated_x = 0
+        self.drag_accumulated_y = 0
         
         wrapper = self.cell_containers[row][col]
         if wrapper:
@@ -475,8 +475,8 @@ class HuarongdaoGameUI:
             empty_row, empty_col = self.game.empty_pos
             cell_size = self._calculate_cell_size()
             
-            delta_x = e.local_x - self.drag_start_x
-            delta_y = e.local_y - self.drag_start_y
+            self.drag_accumulated_x += e.delta_x
+            self.drag_accumulated_y += e.delta_y
             
             is_horizontal = row == empty_row
             is_vertical = col == empty_col
@@ -487,9 +487,9 @@ class HuarongdaoGameUI:
                 max_move = cell_size * abs(target_col - col)
                 
                 if direction > 0:
-                    new_left = min(self.original_left + delta_x, self.original_left + max_move)
+                    new_left = min(self.original_left + self.drag_accumulated_x, self.original_left + max_move)
                 else:
-                    new_left = max(self.original_left + delta_x, self.original_left - max_move)
+                    new_left = max(self.original_left + self.drag_accumulated_x, self.original_left - max_move)
                 
                 wrapper.left = new_left
             elif is_vertical:
@@ -498,9 +498,9 @@ class HuarongdaoGameUI:
                 max_move = cell_size * abs(target_row - row)
                 
                 if direction > 0:
-                    new_top = min(self.original_top + delta_y, self.original_top + max_move)
+                    new_top = min(self.original_top + self.drag_accumulated_y, self.original_top + max_move)
                 else:
-                    new_top = max(self.original_top + delta_y, self.original_top - max_move)
+                    new_top = max(self.original_top + self.drag_accumulated_y, self.original_top - max_move)
                 
                 wrapper.top = new_top
             
