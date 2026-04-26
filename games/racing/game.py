@@ -32,11 +32,11 @@ class RoadLine:
 
 class RacingGame(BaseGame):
     LANE_COUNT = 3
-    BASE_SPEED = 50.0
-    MAX_SPEED = 150.0
-    ACCELERATION = 80.0
-    DECELERATION = 40.0
-    FRICTION = 20.0
+    BASE_SPEED = 160.0
+    MAX_SPEED = 1500.0
+    ACCELERATION = 200.0
+    DECELERATION = 80.0
+    FRICTION = 40.0
     WIN_TIME = 30.0
     
     GAME_WIDTH = 300
@@ -46,8 +46,8 @@ class RacingGame(BaseGame):
     
     LANE_WIDTH = GAME_WIDTH // LANE_COUNT
     
-    OBSTACLE_SPAWN_INTERVAL = 2.0
-    OBSTACLE_MIN_SPAWN_INTERVAL = 1.0
+    OBSTACLE_SPAWN_INTERVAL = 1.5
+    OBSTACLE_MIN_SPAWN_INTERVAL = 0.4
 
     def __init__(self):
         super().__init__("赛车游戏")
@@ -111,44 +111,50 @@ class RacingGame(BaseGame):
             elif self.speed < self.BASE_SPEED:
                 self.speed = min(self.speed + self.FRICTION * delta_time, self.BASE_SPEED)
 
-    def _get_occupied_lanes_ahead(self) -> set:
-        occupied = set()
-        check_distance = 200
+    def _get_lane_obstacle_distance(self, lane: int) -> float:
+        min_distance = float('inf')
         for obstacle in self.obstacles:
-            if obstacle.y < check_distance and obstacle.y > -100:
-                occupied.add(obstacle.lane)
-        return occupied
+            if obstacle.lane == lane:
+                if obstacle.y < min_distance:
+                    min_distance = obstacle.y
+        return min_distance
+    
+    def _has_obstacle_in_y_range(self, y_start: float, y_end: float) -> bool:
+        for obstacle in self.obstacles:
+            if y_start <= obstacle.y <= y_end:
+                return True
+        return False
     
     def _spawn_obstacle(self) -> None:
-        occupied_lanes = self._get_occupied_lanes_ahead()
+        same_lane_safe_distance = 250
+        y_range_safe_distance = 100
         
-        max_obstacles = min(2, self.LANE_COUNT - 1)
-        num_obstacles = random.randint(1, max_obstacles)
+        available_lanes = []
+        for lane in range(self.LANE_COUNT):
+            dist = self._get_lane_obstacle_distance(lane)
+            if dist > same_lane_safe_distance or dist == float('inf'):
+                available_lanes.append(lane)
         
-        used_lanes = set()
+        if not available_lanes:
+            return
         
-        for _ in range(num_obstacles):
-            available_lanes = [
-                l for l in range(self.LANE_COUNT) 
-                if l not in used_lanes and l not in occupied_lanes
-            ]
-            
-            if not available_lanes:
-                all_lanes = set(range(self.LANE_COUNT))
-                available_lanes = list(all_lanes - used_lanes - occupied_lanes)
-                
-                if not available_lanes:
-                    available_lanes = list(all_lanes - used_lanes)
-                    if not available_lanes:
-                        break
-            
-            lane = random.choice(available_lanes)
-            used_lanes.add(lane)
-            
-            obstacle_type = ObstacleType.CAR
-            
-            obstacle = Obstacle(lane, -80, obstacle_type)
-            self.obstacles.append(obstacle)
+        new_obstacle_y = -80
+        filtered_lanes = []
+        for lane in available_lanes:
+            if not self._has_obstacle_in_y_range(
+                new_obstacle_y - y_range_safe_distance,
+                new_obstacle_y + y_range_safe_distance + 60
+            ):
+                filtered_lanes.append(lane)
+        
+        if filtered_lanes:
+            available_lanes = filtered_lanes
+        
+        lane = random.choice(available_lanes)
+        
+        obstacle_type = ObstacleType.CAR
+        obstacle = Obstacle(lane, new_obstacle_y, obstacle_type)
+        self.obstacles.append(obstacle)
 
     def _update_obstacles(self, delta_time: float) -> None:
         speed_factor = self.speed / self.BASE_SPEED
