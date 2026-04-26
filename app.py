@@ -467,12 +467,12 @@ class SudokuGameUI:
         cell = self.cell_containers[row][col]
         state = self.game.cell_states[row][col]
         
-        if selected:
-            cell.bgcolor = ft.Colors.LIGHT_BLUE_200
-        elif state == SudokuCellState.FILLED_WRONG:
+        if state == SudokuCellState.FILLED_WRONG:
             cell.bgcolor = ft.Colors.RED_100
         elif state == SudokuCellState.FILLED_CORRECT:
             cell.bgcolor = ft.Colors.GREEN_100
+        elif selected:
+            cell.bgcolor = ft.Colors.LIGHT_BLUE_200
         else:
             cell.bgcolor = ft.Colors.AMBER_50
         
@@ -495,8 +495,7 @@ class SudokuGameUI:
         
         if self.game.cell_states[row][col] == SudokuCellState.FILLED_WRONG:
             self._show_error_tip("填入错误！")
-            self._update_cell_style(row, col, selected=False)
-            self.selected_cell = None
+            self._update_cell_style(row, col, selected=True)
             self._hide_error_tip_delayed()
         else:
             self._update_cell_style(row, col, selected=True)
