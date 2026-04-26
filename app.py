@@ -2758,13 +2758,6 @@ class GomokuGameUI:
         )
         stack.controls.append(board_bg)
         
-        grid_container = ft.Container(
-            width=total_width,
-            height=total_height,
-            left=0,
-            top=0
-        )
-        
         grid_column = ft.Column(
             [],
             spacing=0,
@@ -2825,9 +2818,11 @@ class GomokuGameUI:
                 )
             )
         
-        grid_container.content = grid_column
-        grid_container.left = self.BOARD_PADDING - self.CELL_SIZE // 2
-        grid_container.top = self.BOARD_PADDING - self.CELL_SIZE // 2
+        grid_container = ft.Container(
+            content=grid_column,
+            left=self.BOARD_PADDING,
+            top=self.BOARD_PADDING
+        )
         stack.controls.append(grid_container)
         
         self.piece_containers: List[List[Optional[ft.Container]]] = [
@@ -2912,14 +2907,17 @@ class GomokuGameUI:
         piece_color = ft.Colors.BLACK if color == PlayerColor.BLACK else ft.Colors.WHITE
         border_color = ft.Colors.WHITE if color == PlayerColor.BLACK else ft.Colors.GREY_400
         
+        piece_left = self.BOARD_PADDING + x * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
+        piece_top = self.BOARD_PADDING + y * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
+        
         piece = ft.Container(
             width=self.PIECE_SIZE,
             height=self.PIECE_SIZE,
             bgcolor=piece_color,
             border_radius=self.PIECE_SIZE // 2,
             border=ft.Border.all(1, border_color),
-            left=self.BOARD_PADDING + x * self.CELL_SIZE - self.PIECE_SIZE // 2,
-            top=self.BOARD_PADDING + y * self.CELL_SIZE - self.PIECE_SIZE // 2,
+            left=piece_left,
+            top=piece_top,
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=3,
