@@ -15,10 +15,11 @@ from games.snake import SnakeGame, Direction, Position
 class SnakeGameUI:
     """贪吃蛇游戏界面"""
     
-    def __init__(self):
+    def __init__(self, on_exit=None):
         self.game: Optional[SnakeGame] = None
         self.page: Optional[ft.Page] = None
         self.game_task: Optional[asyncio.Task] = None
+        self.on_exit = on_exit
         
         self.game_container: Optional[ft.Container] = None
         self.game_score_text: Optional[ft.Text] = None
@@ -32,6 +33,8 @@ class SnakeGameUI:
         self.start_button: Optional[ft.Button] = None
         self.restart_button: Optional[ft.Button] = None
         self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
     
     def main(self, page: ft.Page):
         """主入口"""
@@ -121,6 +124,30 @@ class SnakeGameUI:
             )
         )
         
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
         self.welcome_screen = ft.Container(
             content=ft.Column(
                 [
@@ -147,7 +174,11 @@ class SnakeGameUI:
                         color=ft.Colors.WHITE
                     ),
                     ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
-                    self.start_button
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER
@@ -160,7 +191,7 @@ class SnakeGameUI:
             content=ft.Column(
                 [
                     ft.Row(
-                        [self.game_score_text],
+                        [self.game_score_text, ft.Container(expand=True), self.game_exit_button],
                         alignment=ft.MainAxisAlignment.CENTER
                     ),
                     ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
@@ -194,7 +225,7 @@ class SnakeGameUI:
                     self.game_over_score_text,
                     ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
                     ft.Row(
-                        [self.restart_button, self.back_button],
+                        [self.restart_button, self.back_button, self.exit_button],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=20
                     )
@@ -280,6 +311,23 @@ class SnakeGameUI:
         
         self.game = None
         self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
     
     def _update_score(self):
         """更新分数显示"""
@@ -611,11 +659,12 @@ class PlayedCardsWidget(ft.Column):
 class DoudizhuGameUI:
     """斗地主游戏界面"""
     
-    def __init__(self):
+    def __init__(self, on_exit=None):
         self.game: Optional[DoudizhuGame] = None
         self.player_index = 0
         self.selected_cards: List[DoudizhuCard] = []
         self.card_widgets: List[CardWidget] = []
+        self.on_exit = on_exit
         
         self.page: Optional[ft.Page] = None
         
@@ -965,31 +1014,34 @@ class DoudizhuGameUI:
         self.selected_cards = []
         self.card_widgets = []
         
-        self.start_button.visible = True
-        self.start_button.disabled = False
-        self.exit_button.visible = False
-        self.play_button.visible = False
-        self.play_button.disabled = True
-        self.pass_button.visible = False
-        self.pass_button.disabled = True
-        
-        self.hand_cards_row.controls.clear()
-        self.bottom_cards_row.controls.clear()
-        self._clear_all_played_cards()
-        
-        for widget in self.player_info_widgets:
-            widget.player = DoudizhuPlayer(widget.player.player_id, f"玩家{widget.player.player_id + 1}")
-            widget.is_current = False
-            widget.update_info()
-        
-        self.start_button.update()
-        self.exit_button.update()
-        self.play_button.update()
-        self.pass_button.update()
-        self.hand_cards_row.update()
-        self.bottom_cards_row.update()
-        
-        self._show_message("欢迎来到斗地主！点击\"开始游戏\"按钮开始游戏。")
+        if self.on_exit:
+            self.on_exit()
+        else:
+            self.start_button.visible = True
+            self.start_button.disabled = False
+            self.exit_button.visible = False
+            self.play_button.visible = False
+            self.play_button.disabled = True
+            self.pass_button.visible = False
+            self.pass_button.disabled = True
+            
+            self.hand_cards_row.controls.clear()
+            self.bottom_cards_row.controls.clear()
+            self._clear_all_played_cards()
+            
+            for widget in self.player_info_widgets:
+                widget.player = DoudizhuPlayer(widget.player.player_id, f"玩家{widget.player.player_id + 1}")
+                widget.is_current = False
+                widget.update_info()
+            
+            self.start_button.update()
+            self.exit_button.update()
+            self.play_button.update()
+            self.pass_button.update()
+            self.hand_cards_row.update()
+            self.bottom_cards_row.update()
+            
+            self._show_message("欢迎来到斗地主！点击\"开始游戏\"按钮开始游戏。")
     
     def _play_cards(self, e):
         """出牌"""
@@ -1248,12 +1300,193 @@ class DoudizhuGameUI:
         return straights
 
 
+class GameSelector:
+    """游戏选择页面"""
+    
+    def __init__(self):
+        self.page: Optional[ft.Page] = None
+        self.selector_screen: Optional[ft.Container] = None
+        self.game_container: Optional[ft.Container] = None
+        self.current_game_ui = None
+    
+    def main(self, page: ft.Page):
+        """主入口"""
+        self.page = page
+        page.title = "小游戏合集"
+        page.theme_mode = ft.ThemeMode.LIGHT
+        page.bgcolor = ft.Colors.BLUE_GREY_900
+        page.padding = 20
+        page.window_width = 900
+        page.window_height = 700
+        page.window_resizable = True
+        
+        page.add(self._build_ui())
+        
+        self._show_selector_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        title_text = ft.Text(
+            "🎮 小游戏合集",
+            size=48,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        subtitle_text = ft.Text(
+            "请选择你想玩的游戏",
+            size=20,
+            color=ft.Colors.GREY_400
+        )
+        
+        snake_button = ft.Button(
+            "🐍 贪吃蛇",
+            on_click=self._start_snake_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        doudizhu_button = ft.Button(
+            "🃏 斗地主",
+            on_click=self._start_doudizhu_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.ORANGE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        snake_desc = ft.Text(
+            "使用 WASD 控制方向，吃到 50 个豆子获胜",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
+        doudizhu_desc = ft.Text(
+            "经典斗地主玩法，支持人机对战",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
+        self.selector_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    title_text,
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    subtitle_text,
+                    ft.Divider(height=80, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [
+                            ft.Column(
+                                [snake_button, snake_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            ),
+                            ft.Container(width=60),
+                            ft.Column(
+                                [doudizhu_button, doudizhu_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            )
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0),
+            visible=True
+        )
+        
+        self.game_container = ft.Container(
+            content=ft.Column([]),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [self.selector_screen, self.game_container],
+            expand=True
+        )
+    
+    def _show_selector_screen(self):
+        """显示游戏选择页面"""
+        self.selector_screen.visible = True
+        self.game_container.visible = False
+        
+        self.selector_screen.update()
+        self.game_container.update()
+    
+    def _show_game_screen(self):
+        """显示游戏页面"""
+        self.selector_screen.visible = False
+        self.game_container.visible = True
+        
+        self.selector_screen.update()
+        self.game_container.update()
+    
+    def _clear_game_container(self):
+        """清空游戏容器"""
+        self.game_container.content.controls.clear()
+        self.game_container.update()
+    
+    def _start_snake_game(self, e):
+        """启动贪吃蛇游戏"""
+        self._clear_game_container()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = SnakeGameUI(on_exit=on_exit)
+        
+        self.page.title = "贪吃蛇游戏"
+        self.page.bgcolor = ft.Colors.BLACK
+        self.page.window_width = 800
+        self.page.window_height = 650
+        
+        self.current_game_ui = game_ui
+        game_ui.main(self.page)
+        
+        self._show_game_screen()
+    
+    def _start_doudizhu_game(self, e):
+        """启动斗地主游戏"""
+        self._clear_game_container()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = DoudizhuGameUI(on_exit=on_exit)
+        
+        self.page.title = "斗地主游戏"
+        self.page.bgcolor = ft.Colors.GREEN_700
+        self.page.window_width = 1000
+        self.page.window_height = 700
+        
+        self.current_game_ui = game_ui
+        game_ui.main(self.page)
+        
+        self._show_game_screen()
+
+
 def main():
     """主函数"""
     import os
     
     print("=" * 50)
-    print("贪吃蛇游戏")
+    print("小游戏合集")
     print("=" * 50)
     print(f"Python 版本: {sys.version}")
     print(f"工作目录: {os.getcwd()}")
@@ -1265,8 +1498,8 @@ def main():
     print("=" * 50)
     
     try:
-        game_ui = SnakeGameUI()
-        ft.run(game_ui.main, view=ft.AppView.WEB_BROWSER)
+        game_selector = GameSelector()
+        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER)
     except Exception as e:
         print(f"\n错误: {e}")
         print("\n可能的解决方案:")
