@@ -51,6 +51,8 @@ class HuarongdaoGameUI:
         self.dragging_cell: Optional[Tuple[int, int]] = None
         self.drag_start_global_x: float = 0
         self.drag_start_global_y: float = 0
+        self.drag_accumulated_x: float = 0
+        self.drag_accumulated_y: float = 0
         self.original_left: float = 0
         self.original_top: float = 0
     
@@ -414,7 +416,7 @@ class HuarongdaoGameUI:
                 
                 gesture = ft.GestureDetector(
                     content=cell,
-                    on_tap=lambda e, row=i, col=j: self._on_cell_click(row, col),
+                    on_tap=lambda e, row=i, col=j: self._on_cell_click(e, row, col),
                     on_pan_start=lambda e, row=i, col=j: self._on_pan_start(e, row, col),
                     on_pan_update=lambda e: self._on_pan_update(e),
                     on_pan_end=lambda e: self._on_pan_end(e),
@@ -432,34 +434,76 @@ class HuarongdaoGameUI:
         
         board_container.update()
     
-    def _on_cell_click(self, row: int, col: int):
+    def _on_cell_click(self, e, row: int, col: int):
         """格子点击事件"""
         if not self.game or not self.game.is_running:
             return
         
-        if self.game.move(row, col):
-            self._update_board_display()
-            self._update_moves_display()
+        try:
+            if hasattr(e, 'control') and hasattr(e.control, 'data') and e.control.data:
+                row = e.control.data.get('row', row)
+                col = e.control.data.get('col', col)
+        except (AttributeError, TypeError):
+            pass
+        
+        if not self.game.can_move(row, col):
+            return
+        
+        empty_pos = self.game._get_adjacent_empty_pos(row, col)
+        if empty_pos is None:
+            return
+        
+        empty_row, empty_col = empty_pos
+        
+        self.game.move(row, col)
+        
+        wrapper = self.cell_containers[row][col]
+        if wrapper:
+            cell_size = self._calculate_cell_size()
+            new_left = self.BOARD_PADDING + empty_col * cell_size + 2
+            new_top = self.BOARD_PADDING + empty_row * cell_size + 2
             
-            if self.game.won:
-                if self.game_task and not self.game_task.done():
-                    self.game_task.cancel()
-                self._show_game_over_screen(won=True)
+            wrapper.left = new_left
+            wrapper.top = new_top
+            
+            try:
+                if hasattr(wrapper, 'content') and hasattr(wrapper.content, 'data'):
+                    wrapper.content.data = {'row': empty_row, 'col': empty_col}
+            except (AttributeError, TypeError):
+                pass
+            
+            wrapper.update()
+            
+            self.cell_containers[empty_row][empty_col] = wrapper
+            self.cell_containers[row][col] = None
+        
+        self._update_moves_display()
+        
+        if self.game.won:
+            if self.game_task and not self.game_task.done():
+                self.game_task.cancel()
+            self._show_game_over_screen(won=True)
     
     def _on_pan_start(self, e, row: int, col: int):
         """拖动开始"""
         if not self.game or not self.game.is_running:
             return
         
+        try:
+            if hasattr(e, 'control'):
+                if hasattr(e.control, 'data') and e.control.data:
+                    if isinstance(e.control.data, dict):
+                        row = e.control.data.get('row', row)
+                        col = e.control.data.get('col', col)
+        except (AttributeError, TypeError):
+            pass
+        
         if not self.game.can_move(row, col):
             return
         
         self.dragging_cell = (row, col)
-        try:
-            self.drag_start_global_x = e.global_x
-            self.drag_start_global_y = e.global_y
-        except AttributeError:
-            pass
+        self.drag_accumulated_x = 0
+        self.drag_accumulated_y = 0
         
         wrapper = self.cell_containers[row][col]
         if wrapper:
@@ -475,38 +519,60 @@ class HuarongdaoGameUI:
         wrapper = self.cell_containers[row][col]
         
         if wrapper:
-            empty_row, empty_col = self.game.empty_pos
+            empty_pos = self.game._get_adjacent_empty_pos(row, col)
+            if empty_pos is None:
+                return
+            
+            empty_row, empty_col = empty_pos
             cell_size = self._calculate_cell_size()
             
             try:
-                delta_x = e.global_x - self.drag_start_global_x
-                delta_y = e.global_y - self.drag_start_global_y
-            except AttributeError:
+                if hasattr(e, 'local_delta') and e.local_delta is not None:
+                    delta_x = e.local_delta.x
+                    delta_y = e.local_delta.y
+                    self.drag_accumulated_x += delta_x
+                    self.drag_accumulated_y += delta_y
+                elif hasattr(e, 'delta_x'):
+                    delta_x = e.delta_x
+                    delta_y = e.delta_y
+                    self.drag_accumulated_x += delta_x
+                    self.drag_accumulated_y += delta_y
+                elif hasattr(e, 'global_x'):
+                    current_x = e.global_x
+                    current_y = e.global_y
+                    if self.drag_accumulated_x == 0 and self.drag_accumulated_y == 0:
+                        self.drag_start_global_x = current_x
+                        self.drag_start_global_y = current_y
+                    self.drag_accumulated_x = current_x - self.drag_start_global_x
+                    self.drag_accumulated_y = current_y - self.drag_start_global_y
+                else:
+                    return
+            except (AttributeError, TypeError):
                 return
             
             is_horizontal = row == empty_row
             is_vertical = col == empty_col
             
             if is_horizontal:
-                target_col = empty_col
-                direction = 1 if target_col > col else -1
-                max_move = cell_size * abs(target_col - col)
+                max_move = cell_size * abs(empty_col - col)
                 
-                if direction > 0:
-                    new_left = min(self.original_left + delta_x, self.original_left + max_move)
+                if empty_col > col:
+                    new_left = max(self.original_left + self.drag_accumulated_x, self.original_left - max_move)
+                    new_left = min(new_left, self.original_left + max_move)
                 else:
-                    new_left = max(self.original_left + delta_x, self.original_left - max_move)
+                    new_left = max(self.original_left + self.drag_accumulated_x, self.original_left - max_move)
+                    new_left = min(new_left, self.original_left + max_move)
                 
                 wrapper.left = new_left
             elif is_vertical:
-                target_row = empty_row
-                direction = 1 if target_row > row else -1
-                max_move = cell_size * abs(target_row - row)
+                max_move = cell_size * abs(empty_row - row)
                 
-                if direction > 0:
-                    new_top = min(self.original_top + delta_y, self.original_top + max_move)
+                if empty_row > row:
+                    new_top = max(self.original_top + self.drag_accumulated_y, self.original_top - max_move)
+                    new_top = min(new_top, self.original_top + max_move)
                 else:
-                    new_top = max(self.original_top + delta_y, self.original_top - max_move)
+                    new_top = max(self.original_top + self.drag_accumulated_y, self.original_top - max_move)
+                    new_top = min(new_top, self.original_top + max_move)
                 
                 wrapper.top = new_top
             
@@ -522,19 +588,62 @@ class HuarongdaoGameUI:
         
         if wrapper:
             cell_size = self._calculate_cell_size()
-            moved_distance = 0
             
-            empty_row, empty_col = self.game.empty_pos
+            empty_pos = self.game._get_adjacent_empty_pos(row, col)
+            if empty_pos is None:
+                wrapper.left = self.original_left
+                wrapper.top = self.original_top
+                wrapper.update()
+                self.dragging_cell = None
+                return
+            
+            empty_row, empty_col = empty_pos
             is_horizontal = row == empty_row
             is_vertical = col == empty_col
             
-            if is_horizontal:
-                moved_distance = abs(wrapper.left - self.original_left)
-            elif is_vertical:
-                moved_distance = abs(wrapper.top - self.original_top)
+            should_move = False
             
-            if moved_distance > cell_size * 0.5:
-                self._on_cell_click(row, col)
+            if is_horizontal:
+                if empty_col > col:
+                    if self.drag_accumulated_x > cell_size * 0.5:
+                        should_move = True
+                else:
+                    if self.drag_accumulated_x < -cell_size * 0.5:
+                        should_move = True
+            elif is_vertical:
+                if empty_row > row:
+                    if self.drag_accumulated_y > cell_size * 0.5:
+                        should_move = True
+                else:
+                    if self.drag_accumulated_y < -cell_size * 0.5:
+                        should_move = True
+            
+            if should_move:
+                self.game.move(row, col)
+                
+                new_left = self.BOARD_PADDING + empty_col * cell_size + 2
+                new_top = self.BOARD_PADDING + empty_row * cell_size + 2
+                
+                wrapper.left = new_left
+                wrapper.top = new_top
+                
+                try:
+                    if hasattr(wrapper, 'content') and hasattr(wrapper.content, 'data'):
+                        wrapper.content.data = {'row': empty_row, 'col': empty_col}
+                except (AttributeError, TypeError):
+                    pass
+                
+                wrapper.update()
+                
+                self.cell_containers[empty_row][empty_col] = wrapper
+                self.cell_containers[row][col] = None
+                
+                self._update_moves_display()
+                
+                if self.game.won:
+                    if self.game_task and not self.game_task.done():
+                        self.game_task.cancel()
+                    self._show_game_over_screen(won=True)
             else:
                 wrapper.left = self.original_left
                 wrapper.top = self.original_top
