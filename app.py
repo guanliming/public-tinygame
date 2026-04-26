@@ -4466,7 +4466,7 @@ class JunqiGameUI:
                 elif is_railway:
                     cell_bgcolor = ft.Colors.BROWN_300
                 else:
-                    cell_bgcolor = ft.Colors.BEIGE_200
+                    cell_bgcolor = ft.Colors.GREY_200
                 
                 border = ft.Border(
                     top=ft.BorderSide(1, ft.Colors.BROWN_600),
@@ -4672,7 +4672,7 @@ class JunqiGameUI:
                     elif is_railway:
                         cell.bgcolor = ft.Colors.BROWN_300
                     else:
-                        cell.bgcolor = ft.Colors.BEIGE_200
+                        cell.bgcolor = ft.Colors.GREY_200
                     cell.update()
         
         self._render_all_pieces()
