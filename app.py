@@ -372,7 +372,7 @@ class SudokuGameUI:
         if not self.game or not self.game_screen:
             return
         
-        board_container = self.game_screen.content.controls[3]
+        board_container = self.game_screen.content.controls[4]
         stack = board_container.content
         stack.controls.clear()
         
