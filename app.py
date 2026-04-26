@@ -1702,12 +1702,7 @@ class MinesweeperGameUI:
                     ),
                     ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "左键: 翻开格子",
-                        size=16,
-                        color=ft.Colors.GREY_400
-                    ),
-                    ft.Text(
-                        "右键: 标记/取消问号",
+                        "点击: 翻开格子",
                         size=16,
                         color=ft.Colors.GREY_400
                     ),
@@ -1853,7 +1848,7 @@ class MinesweeperGameUI:
         
         self.cell_buttons = []
         
-        cell_size = 10
+        cell_size = 20
         
         for y in range(self.game.GRID_HEIGHT):
             row_controls = []
@@ -1864,17 +1859,11 @@ class MinesweeperGameUI:
                     height=cell_size,
                     bgcolor=ft.Colors.GREY_500,
                     border=ft.Border.all(1, ft.Colors.GREY_700),
-                    alignment=ft.Alignment(0, 0)
+                    alignment=ft.Alignment(0, 0),
+                    on_click=lambda e, x=x, y=y: self._on_click(x, y)
                 )
                 
-                gesture = ft.GestureDetector(
-                    content=cell,
-                    on_tap=lambda e, x=x, y=y: self._on_left_click(x, y),
-                    on_secondary_tap=lambda e, x=x, y=y: self._on_right_click(x, y),
-                    data={"x": x, "y": y}
-                )
-                
-                row_controls.append(gesture)
+                row_controls.append(cell)
                 row_buttons.append(cell)
             
             self.cell_buttons.append(row_buttons)
@@ -1895,12 +1884,12 @@ class MinesweeperGameUI:
             self.status_text.value = f"已翻开: {self.game.revealed_count} 格"
             self.status_text.update()
     
-    def _on_left_click(self, x: int, y: int):
-        """左击事件"""
+    def _on_click(self, x: int, y: int):
+        """点击事件"""
         if not self.game or not self.game.is_running:
             return
         
-        continue_game = self.game.left_click(x, y)
+        continue_game = self.game.click(x, y)
         
         self._render_game()
         self._update_status()
@@ -1911,14 +1900,6 @@ class MinesweeperGameUI:
             else:
                 self._reveal_all_mines()
                 self._show_game_over_screen(won=False)
-    
-    def _on_right_click(self, x: int, y: int):
-        """右击事件"""
-        if not self.game or not self.game.is_running:
-            return
-        
-        self.game.right_click(x, y)
-        self._render_game()
     
     def _render_game(self):
         """渲染游戏"""
@@ -1933,20 +1914,17 @@ class MinesweeperGameUI:
                 if state == CellState.HIDDEN:
                     cell.bgcolor = ft.Colors.GREY_500
                     cell.content = None
-                elif state == CellState.QUESTIONED:
-                    cell.bgcolor = ft.Colors.YELLOW_300
-                    cell.content = ft.Text("?", size=8, color=ft.Colors.BLACK, weight=ft.FontWeight.BOLD)
                 elif state == CellState.REVEALED:
                     if self.game.grid[x][y]:
                         cell.bgcolor = ft.Colors.RED
-                        cell.content = ft.Text("💣", size=8)
+                        cell.content = ft.Text("💣", size=14)
                     else:
                         mine_count = self.game.get_adjacent_mine_count(x, y)
                         cell.bgcolor = ft.Colors.GREY_200
                         if mine_count > 0:
                             cell.content = ft.Text(
                                 str(mine_count),
-                                size=8,
+                                size=14,
                                 color=self._get_number_color(mine_count),
                                 weight=ft.FontWeight.BOLD
                             )
@@ -1966,14 +1944,14 @@ class MinesweeperGameUI:
                 
                 if self.game.grid[x][y]:
                     cell.bgcolor = ft.Colors.RED
-                    cell.content = ft.Text("💣", size=8)
+                    cell.content = ft.Text("💣", size=14)
                 elif self.game.cell_states[x][y] == CellState.HIDDEN:
                     cell.bgcolor = ft.Colors.GREY_200
                     mine_count = self.game.get_adjacent_mine_count(x, y)
                     if mine_count > 0:
                         cell.content = ft.Text(
                             str(mine_count),
-                            size=8,
+                            size=14,
                             color=self._get_number_color(mine_count),
                             weight=ft.FontWeight.BOLD
                         )

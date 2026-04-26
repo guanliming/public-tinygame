@@ -12,7 +12,6 @@ class CellState(Enum):
     """格子状态枚举"""
     HIDDEN = 0
     REVEALED = 1
-    QUESTIONED = 2
 
 
 class MinesweeperGame(BaseGame):
@@ -101,8 +100,8 @@ class MinesweeperGame(BaseGame):
                         continue
                     self._reveal_cell(x + dx, y + dy)
 
-    def left_click(self, x: int, y: int) -> bool:
-        """左击翻开格子
+    def click(self, x: int, y: int) -> bool:
+        """点击翻开格子
         
         Returns:
             bool: True表示游戏继续，False表示游戏结束
@@ -133,19 +132,6 @@ class MinesweeperGame(BaseGame):
             return False
 
         return True
-
-    def right_click(self, x: int, y: int) -> None:
-        """右击标记/取消标记问号"""
-        if self.game_over or self.won:
-            return
-
-        if x < 0 or x >= self.GRID_WIDTH or y < 0 or y >= self.GRID_HEIGHT:
-            return
-
-        if self.cell_states[x][y] == CellState.HIDDEN:
-            self.cell_states[x][y] = CellState.QUESTIONED
-        elif self.cell_states[x][y] == CellState.QUESTIONED:
-            self.cell_states[x][y] = CellState.HIDDEN
 
     def next_turn(self):
         """进入下一回合（扫雷游戏不需要）"""
