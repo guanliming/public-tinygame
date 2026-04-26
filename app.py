@@ -36,21 +36,14 @@ class SnakeGameUI:
         self.exit_button: Optional[ft.Button] = None
         self.game_exit_button: Optional[ft.Button] = None
     
-    def main(self, page: ft.Page):
-        """主入口"""
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
         self.page = page
-        page.title = "贪吃蛇游戏"
-        page.theme_mode = ft.ThemeMode.LIGHT
-        page.bgcolor = ft.Colors.BLACK
-        page.padding = 20
-        page.window_width = 800
-        page.window_height = 650
-        page.window_resizable = False
-        
         page.on_keyboard_event = self._on_keyboard_event
-        
-        page.add(self._build_ui())
-        
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
         self._show_welcome_screen()
     
     def _build_ui(self):
@@ -680,23 +673,17 @@ class DoudizhuGameUI:
         self.pass_button: Optional[ft.Button] = None
         self.exit_button: Optional[ft.Button] = None
     
-    def main(self, page: ft.Page):
-        """主入口"""
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
         self.page = page
-        page.title = "斗地主游戏"
-        page.theme_mode = ft.ThemeMode.LIGHT
-        page.bgcolor = ft.Colors.GREEN_700
-        page.padding = 20
-        page.window_width = 1000
-        page.window_height = 700
-        page.window_resizable = True
-        
-        page.add(self._build_ui())
-        
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
         self._show_message("欢迎来到斗地主！点击\"开始游戏\"按钮开始游戏。")
     
     def _build_ui(self):
-        """构建UI"""
+        """构建UI - 三人斗地主布局：我在底部，对手在左边和顶部"""
         self.start_button = ft.Button(
             "开始游戏",
             on_click=self._start_game,
@@ -715,6 +702,7 @@ class DoudizhuGameUI:
             width=100,
             height=50,
             disabled=True,
+            visible=False,
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.GREEN,
                 color=ft.Colors.WHITE,
@@ -728,6 +716,7 @@ class DoudizhuGameUI:
             width=100,
             height=50,
             disabled=True,
+            visible=False,
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.RED,
                 color=ft.Colors.WHITE,
@@ -791,22 +780,21 @@ class DoudizhuGameUI:
             alignment=ft.Alignment(-1, -1)
         )
         
+        north_player_container = ft.Column(
+            [
+                self.player_info_widgets[1],
+                ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
+                self.played_cards_widgets[1]
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+        )
+        
         west_player_container = ft.Column(
             [
                 self.player_info_widgets[2],
-                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                ft.Divider(height=5, color=ft.Colors.TRANSPARENT),
                 self.played_cards_widgets[2]
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            expand=1
-        )
-        
-        east_player_container = ft.Column(
-            [
-                self.player_info_widgets[1],
-                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
-                self.played_cards_widgets[1]
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -841,28 +829,38 @@ class DoudizhuGameUI:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         )
         
+        top_row = ft.Row(
+            [
+                top_left_container,
+                ft.Container(expand=True),
+                north_player_container,
+                ft.Container(expand=True),
+                ft.Container(width=150)
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        )
+        
+        middle_row = ft.Row(
+            [
+                west_player_container,
+                center_container
+            ],
+            expand=True,
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        )
+        
+        bottom_row = ft.Row(
+            [south_player_container],
+            alignment=ft.MainAxisAlignment.CENTER
+        )
+        
         return ft.Column(
             [
-                ft.Row(
-                    [
-                        top_left_container,
-                        ft.Container(expand=True)
-                    ],
-                    alignment=ft.MainAxisAlignment.START
-                ),
-                ft.Row(
-                    [
-                        west_player_container,
-                        center_container,
-                        east_player_container
-                    ],
-                    expand=True
-                ),
+                top_row,
                 ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
-                ft.Row(
-                    [south_player_container],
-                    alignment=ft.MainAxisAlignment.CENTER
-                )
+                middle_row,
+                ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                bottom_row
             ],
             expand=True,
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -974,7 +972,7 @@ class DoudizhuGameUI:
         self.start_button.visible = False
         self.exit_button.visible = True
         self.play_button.disabled = False
-        self.pass_button.disabled = not self.game.last_played_cards
+        self.play_button.visible = True
         
         self._update_buttons()
         
@@ -1305,9 +1303,8 @@ class GameSelector:
     
     def __init__(self):
         self.page: Optional[ft.Page] = None
-        self.selector_screen: Optional[ft.Container] = None
-        self.game_container: Optional[ft.Container] = None
         self.current_game_ui = None
+        self.selector_controls = []
     
     def main(self, page: ft.Page):
         """主入口"""
@@ -1320,12 +1317,10 @@ class GameSelector:
         page.window_height = 700
         page.window_resizable = True
         
-        page.add(self._build_ui())
-        
         self._show_selector_screen()
     
-    def _build_ui(self):
-        """构建UI"""
+    def _build_selector_ui(self):
+        """构建选择页面UI"""
         title_text = ft.Text(
             "🎮 小游戏合集",
             size=48,
@@ -1375,7 +1370,7 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
-        self.selector_screen = ft.Container(
+        return ft.Container(
             content=ft.Column(
                 [
                     ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
@@ -1406,45 +1401,33 @@ class GameSelector:
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER
             ),
             expand=True,
-            alignment=ft.Alignment(0, 0),
-            visible=True
-        )
-        
-        self.game_container = ft.Container(
-            content=ft.Column([]),
-            expand=True,
-            visible=False
-        )
-        
-        return ft.Stack(
-            [self.selector_screen, self.game_container],
-            expand=True
+            alignment=ft.Alignment(0, 0)
         )
     
     def _show_selector_screen(self):
         """显示游戏选择页面"""
-        self.selector_screen.visible = True
-        self.game_container.visible = False
+        if self.page is None:
+            return
         
-        self.selector_screen.update()
-        self.game_container.update()
-    
-    def _show_game_screen(self):
-        """显示游戏页面"""
-        self.selector_screen.visible = False
-        self.game_container.visible = True
+        self.page.clean()
         
-        self.selector_screen.update()
-        self.game_container.update()
-    
-    def _clear_game_container(self):
-        """清空游戏容器"""
-        self.game_container.content.controls.clear()
-        self.game_container.update()
+        self.page.title = "小游戏合集"
+        self.page.bgcolor = ft.Colors.BLUE_GREY_900
+        self.page.window_width = 900
+        self.page.window_height = 700
+        self.page.on_keyboard_event = None
+        
+        selector_ui = self._build_selector_ui()
+        self.page.add(selector_ui)
+        
+        self.current_game_ui = None
     
     def _start_snake_game(self, e):
         """启动贪吃蛇游戏"""
-        self._clear_game_container()
+        if self.page is None:
+            return
+        
+        self.page.clean()
         
         def on_exit():
             self._show_selector_screen()
@@ -1457,13 +1440,16 @@ class GameSelector:
         self.page.window_height = 650
         
         self.current_game_ui = game_ui
-        game_ui.main(self.page)
-        
-        self._show_game_screen()
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
     
     def _start_doudizhu_game(self, e):
         """启动斗地主游戏"""
-        self._clear_game_container()
+        if self.page is None:
+            return
+        
+        self.page.clean()
         
         def on_exit():
             self._show_selector_screen()
@@ -1476,9 +1462,9 @@ class GameSelector:
         self.page.window_height = 700
         
         self.current_game_ui = game_ui
-        game_ui.main(self.page)
-        
-        self._show_game_screen()
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
 
 
 def main():
