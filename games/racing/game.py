@@ -32,11 +32,11 @@ class RoadLine:
 
 class RacingGame(BaseGame):
     LANE_COUNT = 3
-    BASE_SPEED = 30.0
+    BASE_SPEED = 50.0
     MAX_SPEED = 150.0
-    ACCELERATION = 15.0
-    DECELERATION = 10.0
-    FRICTION = 5.0
+    ACCELERATION = 80.0
+    DECELERATION = 40.0
+    FRICTION = 20.0
     WIN_TIME = 30.0
     
     GAME_WIDTH = 300
@@ -46,8 +46,8 @@ class RacingGame(BaseGame):
     
     LANE_WIDTH = GAME_WIDTH // LANE_COUNT
     
-    OBSTACLE_SPAWN_INTERVAL = 1.5
-    OBSTACLE_MIN_SPAWN_INTERVAL = 0.6
+    OBSTACLE_SPAWN_INTERVAL = 2.0
+    OBSTACLE_MIN_SPAWN_INTERVAL = 1.0
 
     def __init__(self):
         super().__init__("赛车游戏")
@@ -111,21 +111,41 @@ class RacingGame(BaseGame):
             elif self.speed < self.BASE_SPEED:
                 self.speed = min(self.speed + self.FRICTION * delta_time, self.BASE_SPEED)
 
+    def _get_occupied_lanes_ahead(self) -> set:
+        occupied = set()
+        check_distance = 200
+        for obstacle in self.obstacles:
+            if obstacle.y < check_distance and obstacle.y > -100:
+                occupied.add(obstacle.lane)
+        return occupied
+    
     def _spawn_obstacle(self) -> None:
+        occupied_lanes = self._get_occupied_lanes_ahead()
+        
+        max_obstacles = min(2, self.LANE_COUNT - 1)
+        num_obstacles = random.randint(1, max_obstacles)
+        
         used_lanes = set()
-        num_obstacles = random.randint(1, min(2, self.LANE_COUNT))
         
         for _ in range(num_obstacles):
-            available_lanes = [l for l in range(self.LANE_COUNT) if l not in used_lanes]
+            available_lanes = [
+                l for l in range(self.LANE_COUNT) 
+                if l not in used_lanes and l not in occupied_lanes
+            ]
+            
             if not available_lanes:
-                break
+                all_lanes = set(range(self.LANE_COUNT))
+                available_lanes = list(all_lanes - used_lanes - occupied_lanes)
+                
+                if not available_lanes:
+                    available_lanes = list(all_lanes - used_lanes)
+                    if not available_lanes:
+                        break
             
             lane = random.choice(available_lanes)
             used_lanes.add(lane)
             
-            obstacle_types = [ObstacleType.CAR, ObstacleType.TRUCK, ObstacleType.ROCK]
-            weights = [0.5, 0.3, 0.2]
-            obstacle_type = random.choices(obstacle_types, weights=weights)[0]
+            obstacle_type = ObstacleType.CAR
             
             obstacle = Obstacle(lane, -80, obstacle_type)
             self.obstacles.append(obstacle)

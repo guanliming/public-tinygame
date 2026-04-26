@@ -5974,39 +5974,52 @@ class RacingGameUI:
         for obstacle in self.game.obstacles:
             obs_x = obstacle.lane * self.LANE_WIDTH + (self.LANE_WIDTH - obstacle.width) // 2
             
-            if obstacle.type.value == 1:
-                obs_color = ft.Colors.RED
-            elif obstacle.type.value == 2:
-                obs_color = ft.Colors.ORANGE
-            else:
-                obs_color = ft.Colors.GREY_500
-            
             obs = ft.Container(
                 width=obstacle.width,
                 height=obstacle.height,
-                bgcolor=obs_color,
-                border_radius=5,
-                border=ft.Border.all(2, ft.Colors.BLACK38),
+                bgcolor=ft.Colors.TRANSPARENT,
                 left=obs_x,
                 top=obstacle.y,
+                content=ft.Stack([
+                    ft.Container(
+                        width=obstacle.width,
+                        height=obstacle.height,
+                        bgcolor=ft.Colors.RED_600,
+                        border_radius=ft.BorderRadius(8, 8, 12, 12),
+                        border=ft.Border.all(2, ft.Colors.RED_800)
+                    ),
+                    ft.Container(
+                        width=obstacle.width - 12,
+                        height=18,
+                        bgcolor=ft.Colors.LIGHT_BLUE_200,
+                        left=6,
+                        top=8,
+                        border_radius=3
+                    ),
+                    ft.Container(
+                        width=8,
+                        height=10,
+                        bgcolor=ft.Colors.RED_900,
+                        left=4,
+                        top=obstacle.height - 4,
+                        border_radius=2
+                    ),
+                    ft.Container(
+                        width=8,
+                        height=10,
+                        bgcolor=ft.Colors.RED_900,
+                        right=4,
+                        top=obstacle.height - 4,
+                        border_radius=2
+                    )
+                ]),
                 shadow=ft.BoxShadow(
                     spread_radius=1,
-                    blur_radius=5,
+                    blur_radius=6,
                     color=ft.Colors.BLACK54,
                     offset=ft.Offset(2, 2)
                 )
             )
-            
-            if obstacle.type.value == 1 or obstacle.type.value == 2:
-                window = ft.Container(
-                    width=obstacle.width - 10,
-                    height=15,
-                    bgcolor=ft.Colors.LIGHT_BLUE_200,
-                    left=5,
-                    top=5,
-                    border_radius=3
-                )
-                obs.content = window
             
             stack.controls.append(obs)
         
@@ -6015,11 +6028,58 @@ class RacingGameUI:
         player = ft.Container(
             width=self.PLAYER_WIDTH,
             height=self.PLAYER_HEIGHT,
-            bgcolor=ft.Colors.BLUE_500,
-            border_radius=8,
-            border=ft.Border.all(2, ft.Colors.BLUE_700),
+            bgcolor=ft.Colors.TRANSPARENT,
             left=player_x,
             top=self.game.player_y,
+            content=ft.Stack([
+                ft.Container(
+                    width=self.PLAYER_WIDTH,
+                    height=self.PLAYER_HEIGHT,
+                    bgcolor=ft.Colors.BLUE_500,
+                    border_radius=ft.BorderRadius(12, 12, 8, 8),
+                    border=ft.Border.all(2, ft.Colors.BLUE_700)
+                ),
+                ft.Container(
+                    width=self.PLAYER_WIDTH - 12,
+                    height=18,
+                    bgcolor=ft.Colors.LIGHT_BLUE_200,
+                    left=6,
+                    top=self.PLAYER_HEIGHT - 28,
+                    border_radius=3
+                ),
+                ft.Container(
+                    width=10,
+                    height=6,
+                    bgcolor=ft.Colors.YELLOW_400,
+                    left=5,
+                    top=2,
+                    border_radius=1
+                ),
+                ft.Container(
+                    width=10,
+                    height=6,
+                    bgcolor=ft.Colors.YELLOW_400,
+                    right=5,
+                    top=2,
+                    border_radius=1
+                ),
+                ft.Container(
+                    width=8,
+                    height=10,
+                    bgcolor=ft.Colors.BLUE_900,
+                    left=4,
+                    top=2,
+                    border_radius=2
+                ),
+                ft.Container(
+                    width=8,
+                    height=10,
+                    bgcolor=ft.Colors.BLUE_900,
+                    right=4,
+                    top=2,
+                    border_radius=2
+                )
+            ]),
             shadow=ft.BoxShadow(
                 spread_radius=2,
                 blur_radius=8,
@@ -6027,16 +6087,6 @@ class RacingGameUI:
                 offset=ft.Offset(3, 3)
             )
         )
-        
-        windshield = ft.Container(
-            width=self.PLAYER_WIDTH - 10,
-            height=15,
-            bgcolor=ft.Colors.LIGHT_BLUE_200,
-            left=5,
-            top=self.PLAYER_HEIGHT - 20,
-            border_radius=3
-        )
-        player.content = windshield
         
         stack.controls.append(player)
         
