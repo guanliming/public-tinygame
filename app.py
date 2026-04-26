@@ -12,6 +12,7 @@ from games.doudizhu import (
 from games.snake import SnakeGame, Direction, Position
 from games.twentyone import TwentyOneGame
 from games.minesweeper import MinesweeperGame, CellState
+from games.whackamole import WhackAMoleGame, HoleState
 
 
 class TwentyOneGameUI:
@@ -2003,6 +2004,462 @@ class MinesweeperGameUI:
         self._exit_to_selector(e)
 
 
+class WhackAMoleGameUI:
+    """打地鼠游戏界面"""
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[WhackAMoleGame] = None
+        self.page: Optional[ft.Page] = None
+        self.game_task: Optional[asyncio.Task] = None
+        self.on_exit = on_exit
+        
+        self.hole_containers: List[ft.Container] = []
+        self.score_text: Optional[ft.Text] = None
+        self.time_text: Optional[ft.Text] = None
+        self.game_over_score_text: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.start_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+    
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.score_text = ft.Text(
+            "分数: 0 / 20",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.time_text = ft.Text(
+            "时间: 20秒",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_score_text = ft.Text(
+            "",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.start_button = ft.Button(
+            "开始游戏",
+            on_click=self._start_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "🐿️ 打地鼠",
+                        size=48,
+                        color=ft.Colors.AMBER_400,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "16 个地洞，20 秒时间",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "每秒钟从随机 3 个洞出现松鼠",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "松鼠停留 300ms，打中得 1 分",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "达到 20 分即可获胜",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.score_text, ft.Container(expand=True), self.time_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    self._build_holes_grid()
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_score_text,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _build_holes_grid(self):
+        """构建地洞网格"""
+        self.hole_containers = []
+        
+        grid_rows = []
+        hole_size = 100
+        spacing = 20
+        
+        for row in range(4):
+            row_controls = []
+            for col in range(4):
+                hole_index = row * 4 + col
+                
+                hole_container = ft.Container(
+                    width=hole_size,
+                    height=hole_size,
+                    bgcolor=ft.Colors.BROWN_800,
+                    border_radius=hole_size // 2,
+                    border=ft.Border.all(4, ft.Colors.BROWN_600),
+                    alignment=ft.Alignment(0, 0),
+                    on_click=lambda e, idx=hole_index: self._on_hole_click(idx),
+                    shadow=ft.BoxShadow(
+                        spread_radius=2,
+                        blur_radius=8,
+                        color=ft.Colors.BLACK54,
+                        offset=ft.Offset(0, 4)
+                    )
+                )
+                
+                self.hole_containers.append(hole_container)
+                row_controls.append(hole_container)
+            
+            grid_rows.append(
+                ft.Row(
+                    row_controls,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=spacing
+                )
+            )
+        
+        return ft.Container(
+            content=ft.Column(
+                grid_rows,
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=spacing
+            ),
+            bgcolor=ft.Colors.GREEN_800,
+            border_radius=20,
+            padding=30,
+            border=ft.Border.all(3, ft.Colors.GREEN_600)
+        )
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "🎉 恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_score_text.value = f"太棒了！你打中了 {self.game.score} 只松鼠！"
+        else:
+            self.game_over_screen.content.controls[0].value = "⏰ 时间到！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.ORANGE
+            self.game_over_score_text.value = f"你的分数: {self.game.score} / 20"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _start_game(self, e):
+        """开始游戏"""
+        self.game = WhackAMoleGame()
+        self.game.init_game()
+        
+        self._update_score()
+        self._update_time()
+        self._clear_all_holes()
+        
+        self.game.start()
+        self._show_game_screen()
+        
+        if self.page:
+            self.game_task = self.page.run_task(self._game_loop)
+    
+    def _clear_all_holes(self):
+        """清空所有地洞的松鼠"""
+        for container in self.hole_containers:
+            container.content = None
+            container.update()
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
+    
+    def _update_score(self):
+        """更新分数显示"""
+        if self.game:
+            score_text = f"分数: {self.game.score} / {self.game.WIN_SCORE}"
+            self.score_text.value = score_text
+            self.score_text.update()
+    
+    def _update_time(self):
+        """更新时间显示"""
+        if self.game:
+            remaining = int(self.game.remaining_time)
+            self.time_text.value = f"时间: {remaining}秒"
+            
+            if remaining <= 5:
+                self.time_text.color = ft.Colors.RED
+            else:
+                self.time_text.color = ft.Colors.WHITE
+            
+            self.time_text.update()
+    
+    def _render_hole(self, hole_index: int):
+        """渲染单个地洞"""
+        if not self.game or not self.hole_containers:
+            return
+        
+        container = self.hole_containers[hole_index]
+        state = self.game.hole_states[hole_index]
+        
+        if state == HoleState.EMPTY:
+            container.content = None
+        elif state == HoleState.SQUIRREL:
+            container.content = ft.Text(
+                "🐿️",
+                size=50,
+                text_align=ft.TextAlign.CENTER
+            )
+        elif state == HoleState.HIT:
+            container.content = ft.Text(
+                "💥",
+                size=50,
+                text_align=ft.TextAlign.CENTER
+            )
+        
+        container.update()
+    
+    def _on_hole_click(self, hole_index: int):
+        """地洞点击事件"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        hit = self.game.hit_hole(hole_index)
+        
+        if hit:
+            self._render_hole(hole_index)
+            self._update_score()
+            
+            if self.game.won:
+                if self.game_task and not self.game_task.done():
+                    self.game_task.cancel()
+                self._show_game_over_screen(won=True)
+    
+    async def _game_loop(self):
+        """游戏主循环"""
+        if not self.game:
+            return
+        
+        spawn_task = None
+        
+        while self.game.is_running:
+            self.game.update_time()
+            self._update_time()
+            
+            if spawn_task is None or spawn_task.done():
+                new_holes = self.game.spawn_squirrels()
+                for hole_idx in new_holes:
+                    self._render_hole(hole_idx)
+                
+                if new_holes:
+                    spawn_task = self.page.run_task(self._hide_squirrels_delayed, new_holes.copy())
+            
+            if self.game.game_over:
+                self._show_game_over_screen(won=False)
+                break
+            
+            if self.game.won:
+                self._show_game_over_screen(won=True)
+                break
+            
+            await asyncio.sleep(0.1)
+    
+    async def _hide_squirrels_delayed(self, hole_indices: set):
+        """延迟隐藏松鼠"""
+        await asyncio.sleep(self.game.SQUIRREL_STAY_TIME)
+        
+        if self.game and self.game.is_running:
+            for hole_idx in list(hole_indices):
+                if self.game.hole_states[hole_idx] == HoleState.SQUIRREL:
+                    self.game.hide_squirrels({hole_idx})
+                    self._render_hole(hole_idx)
+
+
 class GameSelector:
     """游戏选择页面"""
     
@@ -2111,6 +2568,24 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
+        whackamole_button = ft.Button(
+            "🐿️ 打地鼠",
+            on_click=self._start_whackamole_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.AMBER_600,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        whackamole_desc = ft.Text(
+            "快速点击地鼠，20秒内打中20只获胜",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -2149,6 +2624,13 @@ class GameSelector:
                         [
                             ft.Column(
                                 [minesweeper_button, minesweeper_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [whackamole_button, whackamole_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
@@ -2263,6 +2745,28 @@ class GameSelector:
         self.page.title = "扫雷游戏"
         self.page.bgcolor = ft.Colors.BLUE_GREY_800
         self.page.window_width = 900
+        self.page.window_height = 700
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
+    
+    def _start_whackamole_game(self, e):
+        """启动打地鼠游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = WhackAMoleGameUI(on_exit=on_exit)
+        
+        self.page.title = "打地鼠游戏"
+        self.page.bgcolor = ft.Colors.GREEN_900
+        self.page.window_width = 850
         self.page.window_height = 700
         
         self.current_game_ui = game_ui

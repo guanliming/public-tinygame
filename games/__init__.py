@@ -8,10 +8,12 @@ from games.doudizhu import (
     get_card_type, compare_cards,
     DoudizhuGame
 )
+from games.whackamole import WhackAMoleGame, HoleState
 
 __all__ = [
     'DoudizhuCard', 'Suit', 'CardType', 'create_deck', 'CARD_VALUES',
     'DoudizhuPlayer', 'PlayerRole',
     'get_card_type', 'compare_cards',
-    'DoudizhuGame'
+    'DoudizhuGame',
+    'WhackAMoleGame', 'HoleState'
 ]
