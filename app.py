@@ -7333,22 +7333,46 @@ class GameSelector:
 def main():
     """主函数"""
     import os
+    import socket
     
-    print("=" * 50)
+    HOST = '0.0.0.0'
+    PORT = 8550
+    
+    print("=" * 60)
     print("小游戏合集")
-    print("=" * 50)
+    print("=" * 60)
     print(f"Python 版本: {sys.version}")
     print(f"工作目录: {os.getcwd()}")
     print(f"Flet 版本: {ft.__version__}")
-    print("=" * 50)
-    print("正在启动游戏界面...")
-    print("游戏将在浏览器中打开。")
-    print("如果浏览器没有自动打开，请手动访问显示的 URL。")
-    print("=" * 50)
+    print("=" * 60)
+    print("正在启动游戏服务器...")
+    print("=" * 60)
+    
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+    except Exception:
+        local_ip = '127.0.0.1'
+    
+    print(f"\n服务器地址:")
+    print(f"  - 本地访问: http://localhost:{PORT}")
+    print(f"  - 局域网访问: http://{local_ip}:{PORT}")
+    print(f"  - 所有接口: http://{HOST}:{PORT}")
+    print(f"\n请在浏览器中打开上述地址访问游戏。")
+    print("=" * 60)
+    print("按 Ctrl+C 停止服务器。")
+    print("=" * 60)
     
     try:
         game_selector = GameSelector()
-        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER)
+        ft.run(
+            game_selector.main,
+            host=HOST,
+            port=PORT,
+            view=ft.AppView.WEB_BROWSER
+        )
+    except KeyboardInterrupt:
+        print("\n\n服务器已停止。")
     except Exception as e:
         print(f"\n错误: {e}")
         print("\n可能的解决方案:")
