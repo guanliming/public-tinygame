@@ -1,11 +1,17 @@
 from .game import (
     RacingGame,
     Obstacle,
-    RoadLine
+    RoadLine,
+    DifficultyLevel,
+    DifficultyConfig,
+    DIFFICULTY_CONFIGS
 )
 
 __all__ = [
     'RacingGame',
     'Obstacle',
-    'RoadLine'
+    'RoadLine',
+    'DifficultyLevel',
+    'DifficultyConfig',
+    'DIFFICULTY_CONFIGS'
 ]

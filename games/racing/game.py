@@ -5,7 +5,52 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 import random
 from typing import List, Optional
 from enum import Enum
+from dataclasses import dataclass
 from core.base_game import BaseGame
+
+
+class DifficultyLevel(Enum):
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+@dataclass
+class DifficultyConfig:
+    base_speed: float
+    max_speed: float
+    acceleration: float
+    deceleration: float
+    obstacle_spawn_interval: float
+    obstacle_min_spawn_interval: float
+    same_lane_safe_distance: float
+    y_range_safe_distance: float
+    name: str
+
+
+DIFFICULTY_CONFIGS = {
+    DifficultyLevel.MEDIUM: DifficultyConfig(
+        base_speed=80.0,
+        max_speed=1000.0,
+        acceleration=150.0,
+        deceleration=60.0,
+        obstacle_spawn_interval=3.0,
+        obstacle_min_spawn_interval=2.0,
+        same_lane_safe_distance=400,
+        y_range_safe_distance=200,
+        name="中等难度"
+    ),
+    DifficultyLevel.HARD: DifficultyConfig(
+        base_speed=160.0,
+        max_speed=1500.0,
+        acceleration=200.0,
+        deceleration=80.0,
+        obstacle_spawn_interval=2.0,
+        obstacle_min_spawn_interval=1.0,
+        same_lane_safe_distance=350,
+        y_range_safe_distance=150,
+        name="最高难度"
+    )
+}
 
 
 class ObstacleType(Enum):
@@ -32,10 +77,6 @@ class RoadLine:
 
 class RacingGame(BaseGame):
     LANE_COUNT = 3
-    BASE_SPEED = 160.0
-    MAX_SPEED = 1500.0
-    ACCELERATION = 200.0
-    DECELERATION = 80.0
     FRICTION = 40.0
     WIN_TIME = 30.0
     
@@ -45,15 +86,15 @@ class RacingGame(BaseGame):
     PLAYER_HEIGHT = 60
     
     LANE_WIDTH = GAME_WIDTH // LANE_COUNT
-    
-    OBSTACLE_SPAWN_INTERVAL = 1.5
-    OBSTACLE_MIN_SPAWN_INTERVAL = 0.4
 
-    def __init__(self):
+    def __init__(self, difficulty: DifficultyLevel = DifficultyLevel.HARD):
         super().__init__("赛车游戏")
+        self.difficulty = difficulty
+        self.config = DIFFICULTY_CONFIGS[difficulty]
+        
         self.player_lane = 1
         self.player_y = self.GAME_HEIGHT - 150
-        self.speed = self.BASE_SPEED
+        self.speed = self.config.base_speed
         self.is_accelerating = False
         self.obstacles: List[Obstacle] = []
         self.road_lines: List[RoadLine] = []
@@ -66,7 +107,7 @@ class RacingGame(BaseGame):
     def init_game(self) -> None:
         self.player_lane = 1
         self.player_y = self.GAME_HEIGHT - 150
-        self.speed = self.BASE_SPEED
+        self.speed = self.config.base_speed
         self.is_accelerating = False
         self.obstacles = []
         self.road_lines = []
@@ -104,12 +145,12 @@ class RacingGame(BaseGame):
 
     def _update_speed(self, delta_time: float) -> None:
         if self.is_accelerating:
-            self.speed = min(self.speed + self.ACCELERATION * delta_time, self.MAX_SPEED)
+            self.speed = min(self.speed + self.config.acceleration * delta_time, self.config.max_speed)
         else:
-            if self.speed > self.BASE_SPEED:
-                self.speed = max(self.speed - self.DECELERATION * delta_time, self.BASE_SPEED)
-            elif self.speed < self.BASE_SPEED:
-                self.speed = min(self.speed + self.FRICTION * delta_time, self.BASE_SPEED)
+            if self.speed > self.config.base_speed:
+                self.speed = max(self.speed - self.config.deceleration * delta_time, self.config.base_speed)
+            elif self.speed < self.config.base_speed:
+                self.speed = min(self.speed + self.FRICTION * delta_time, self.config.base_speed)
 
     def _get_lane_obstacle_distance(self, lane: int) -> float:
         min_distance = float('inf')
@@ -119,15 +160,21 @@ class RacingGame(BaseGame):
                     min_distance = obstacle.y
         return min_distance
     
-    def _has_obstacle_in_y_range(self, y_start: float, y_end: float) -> bool:
+    def _has_obstacle_in_y_range(self, lane: int, y_start: float, y_end: float) -> bool:
+        for obstacle in self.obstacles:
+            if obstacle.lane == lane and y_start <= obstacle.y <= y_end:
+                return True
+        return False
+    
+    def _has_any_obstacle_in_y_range(self, y_start: float, y_end: float) -> bool:
         for obstacle in self.obstacles:
             if y_start <= obstacle.y <= y_end:
                 return True
         return False
     
     def _spawn_obstacle(self) -> None:
-        same_lane_safe_distance = 250
-        y_range_safe_distance = 100
+        same_lane_safe_distance = self.config.same_lane_safe_distance
+        y_range_safe_distance = self.config.y_range_safe_distance
         
         available_lanes = []
         for lane in range(self.LANE_COUNT):
@@ -139,16 +186,12 @@ class RacingGame(BaseGame):
             return
         
         new_obstacle_y = -80
-        filtered_lanes = []
-        for lane in available_lanes:
-            if not self._has_obstacle_in_y_range(
-                new_obstacle_y - y_range_safe_distance,
-                new_obstacle_y + y_range_safe_distance + 60
-            ):
-                filtered_lanes.append(lane)
         
-        if filtered_lanes:
-            available_lanes = filtered_lanes
+        if self._has_any_obstacle_in_y_range(
+            new_obstacle_y - y_range_safe_distance,
+            new_obstacle_y + y_range_safe_distance + 60
+        ):
+            return
         
         lane = random.choice(available_lanes)
         
@@ -157,7 +200,7 @@ class RacingGame(BaseGame):
         self.obstacles.append(obstacle)
 
     def _update_obstacles(self, delta_time: float) -> None:
-        speed_factor = self.speed / self.BASE_SPEED
+        speed_factor = self.speed / self.config.base_speed
         move_distance = self.speed * delta_time * 0.5
         
         for obstacle in self.obstacles[:]:
@@ -167,7 +210,7 @@ class RacingGame(BaseGame):
                 self.obstacles.remove(obstacle)
 
     def _update_road_lines(self, delta_time: float) -> None:
-        speed_factor = self.speed / self.BASE_SPEED
+        speed_factor = self.speed / self.config.base_speed
         move_distance = self.speed * delta_time * 0.5
         
         for line in self.road_lines:
@@ -217,8 +260,8 @@ class RacingGame(BaseGame):
             return False
         
         spawn_interval = max(
-            self.OBSTACLE_MIN_SPAWN_INTERVAL,
-            self.OBSTACLE_SPAWN_INTERVAL - (self.speed - self.BASE_SPEED) * 0.005
+            self.config.obstacle_min_spawn_interval,
+            self.config.obstacle_spawn_interval - (self.speed - self.config.base_speed) * 0.005
         )
         
         if self.game_time - self.last_spawn_time >= spawn_interval:
