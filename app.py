@@ -262,7 +262,7 @@ class LiuliankanGameUI:
                     shadow=ft.BoxShadow(
                         spread_radius=1,
                         blur_radius=5,
-                        color=ft.Colors.BLACK30,
+                        color=ft.Colors.BLACK_26,
                         offset=ft.Offset(2, 2)
                     ),
                     animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT)
@@ -857,7 +857,7 @@ class HuarongdaoGameUI:
             shadow=ft.BoxShadow(
                 spread_radius=5,
                 blur_radius=20,
-                color=ft.Colors.BLACK54,
+                color=ft.Colors.BLACK_54,
                 offset=ft.Offset(0, 10)
             )
         )
@@ -879,12 +879,12 @@ class HuarongdaoGameUI:
                     height=cell_size - 4,
                     bgcolor=cell_color,
                     border_radius=10,
-                    border=ft.Border.all(2, ft.Colors.WHITE30),
+                    border=ft.Border.all(2, ft.Colors.WHITE_30),
                     alignment=ft.Alignment(0, 0),
                     shadow=ft.BoxShadow(
                         spread_radius=1,
                         blur_radius=5,
-                        color=ft.Colors.BLACK54,
+                        color=ft.Colors.BLACK_54,
                         offset=ft.Offset(2, 2)
                     ),
                     animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
@@ -2266,7 +2266,7 @@ class TetrisGameUI:
                         bgcolor=color,
                         left=x * self.CELL_SIZE,
                         top=y * self.CELL_SIZE,
-                        border=ft.Border.all(1, ft.Colors.BLACK38)
+                        border=ft.Border.all(1, ft.Colors.BLACK_38)
                     )
                     stack.controls.append(cell)
         
@@ -2280,7 +2280,7 @@ class TetrisGameUI:
                         bgcolor=color,
                         left=x * self.CELL_SIZE,
                         top=y * self.CELL_SIZE,
-                        border=ft.Border.all(1, ft.Colors.BLACK38)
+                        border=ft.Border.all(1, ft.Colors.BLACK_38)
                     )
                     stack.controls.append(cell)
         
@@ -2318,7 +2318,7 @@ class TetrisGameUI:
                 bgcolor=color,
                 left=offset_x + x * self.NEXT_CELL_SIZE,
                 top=offset_y + y * self.NEXT_CELL_SIZE,
-                border=ft.Border.all(1, ft.Colors.BLACK38)
+                border=ft.Border.all(1, ft.Colors.BLACK_38)
             )
             stack.controls.append(cell)
         
@@ -3113,11 +3113,11 @@ class CardWidget(ft.Container):
         display_text = self._get_card_display()
         
         self.bgcolor = ft.Colors.WHITE
-        self.border = ft.Border.all(2, ft.Colors.BLACK12)
+        self.border = ft.Border.all(2, ft.Colors.BLACK_12)
         self.shadow = ft.BoxShadow(
             spread_radius=1,
             blur_radius=3,
-            color=ft.Colors.BLACK26,
+            color=ft.Colors.BLACK_26,
             offset=ft.Offset(0, 2)
         )
         
@@ -4618,7 +4618,7 @@ class WhackAMoleGameUI:
                     shadow=ft.BoxShadow(
                         spread_radius=2,
                         blur_radius=8,
-                        color=ft.Colors.BLACK54,
+                        color=ft.Colors.BLACK_54,
                         offset=ft.Offset(0, 4)
                     )
                 )
@@ -5299,7 +5299,7 @@ class GomokuGameUI:
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=3,
-                color=ft.Colors.BLACK54,
+                color=ft.Colors.BLACK_54,
                 offset=ft.Offset(1, 1)
             )
         )
@@ -5787,7 +5787,7 @@ class JunqiGameUI:
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=3,
-                color=ft.Colors.BLACK54,
+                color=ft.Colors.BLACK_54,
                 offset=ft.Offset(2, 2)
             )
         )
@@ -6461,7 +6461,7 @@ class RacingGameUI:
             lane_line = ft.Container(
                 width=2,
                 height=self.GAME_HEIGHT,
-                bgcolor=ft.Colors.WHITE30,
+                bgcolor=ft.Colors.WHITE_30,
                 left=lane_x - 1
             )
             stack.controls.append(lane_line)
@@ -6538,7 +6538,7 @@ class RacingGameUI:
                 shadow=ft.BoxShadow(
                     spread_radius=1,
                     blur_radius=6,
-                    color=ft.Colors.BLACK54,
+                    color=ft.Colors.BLACK_54,
                     offset=ft.Offset(2, 2)
                 )
             )
@@ -6605,7 +6605,7 @@ class RacingGameUI:
             shadow=ft.BoxShadow(
                 spread_radius=2,
                 blur_radius=8,
-                color=ft.Colors.BLACK54,
+                color=ft.Colors.BLACK_54,
                 offset=ft.Offset(3, 3)
             )
         )
