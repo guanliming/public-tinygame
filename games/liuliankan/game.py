@@ -177,18 +177,19 @@ class LiuliankanGame(BaseGame):
         
         return True, None
     
-    def check_and_hide_unmatched(self) -> bool:
+    def check_and_hide_unmatched(self) -> Optional[List[Card]]:
         if not self.waiting_for_hide:
-            return False
+            return None
         
         if time.time() - self.last_flip_time >= self.MATCH_DELAY:
+            hidden_cards = self.flipped_cards.copy()
             for card in self.flipped_cards:
                 card.hide()
             self.flipped_cards = []
             self.waiting_for_hide = False
-            return True
+            return hidden_cards
         
-        return False
+        return None
     
     def update_time(self) -> float:
         if not self.start_time:

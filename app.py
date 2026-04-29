@@ -491,8 +491,9 @@ class LiuliankanGameUI:
             self.game.update_time()
             self._update_time()
             
-            if self.game.check_and_hide_unmatched():
-                for card in self.game.flipped_cards:
+            hidden_cards = self.game.check_and_hide_unmatched()
+            if hidden_cards:
+                for card in hidden_cards:
                     self._render_card(card.row, card.col)
             
             if self.game.game_over:
