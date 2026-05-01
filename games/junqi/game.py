@@ -184,7 +184,6 @@ class JunqiGame(BaseGame):
         """设置默认棋盘布局"""
         self._generate_default_pieces(PlayerSide.RED)
         self._generate_default_pieces(PlayerSide.BLUE)
-        self.phase = GamePhase.PLAYING
 
     def _generate_default_pieces(self, side: PlayerSide) -> List[Piece]:
         """生成默认棋子布局"""
@@ -415,7 +414,7 @@ class JunqiGame(BaseGame):
         if not self.is_valid_position(pos.x, pos.y):
             return False
 
-        if pos.y in [1, 2, 9, 10]:
+        if pos.y in [1, 2, 5, 6, 7, 10, 11]:
             return True
         if pos.x in [0, 11] and pos.y in [3, 4, 5, 6, 7, 8]:
             return True

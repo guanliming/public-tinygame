@@ -16,7 +16,7 @@ from games.whackamole import WhackAMoleGame, HoleState
 from games.gomoku import GomokuGame, PlayerColor
 from games.tetris import TetrisGame
 from games.sudoku import SudokuGame as SudokuGameCore, CellState as SudokuCellState
-from games.junqi import JunqiGame, PlayerSide, PieceType, Position, Piece, Move
+from games.junqi import JunqiGame, PlayerSide, PieceType, Position, Piece, Move, GamePhase
 from games.huarongdao import HuarongdaoGame
 from games.racing import RacingGame, Obstacle, RoadLine, DifficultyLevel, DIFFICULTY_CONFIGS
 from games.lianliankan import LianliankanGame, CardState, FruitType
