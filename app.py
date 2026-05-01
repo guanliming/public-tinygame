@@ -428,223 +428,423 @@ class GameSelector:
     
     def _start_snake_game(self, e):
         """启动贪吃蛇游戏"""
+        print("[DEBUG] _start_snake_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = SnakeGameUI(on_exit=on_exit)
-        
-        self.page.title = "贪吃蛇游戏"
-        self.page.bgcolor = ft.Colors.BLACK
-        self.page.window_width = 800
-        self.page.window_height = 650
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating SnakeGameUI...")
+            game_ui = SnakeGameUI(on_exit=on_exit)
+            print(f"[DEBUG] SnakeGameUI created: {type(game_ui)}")
+            
+            self.page.title = "贪吃蛇游戏"
+            self.page.bgcolor = ft.Colors.BLACK
+            self.page.window_width = 800
+            self.page.window_height = 650
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_doudizhu_game(self, e):
         """启动斗地主游戏"""
+        print("[DEBUG] _start_doudizhu_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = DoudizhuGameUI(on_exit=on_exit)
-        
-        self.page.title = "斗地主游戏"
-        self.page.bgcolor = ft.Colors.GREEN_700
-        self.page.window_width = 1000
-        self.page.window_height = 700
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating DoudizhuGameUI...")
+            game_ui = DoudizhuGameUI(on_exit=on_exit)
+            print(f"[DEBUG] DoudizhuGameUI created: {type(game_ui)}")
+            
+            self.page.title = "斗地主游戏"
+            self.page.bgcolor = ft.Colors.GREEN_700
+            self.page.window_width = 1000
+            self.page.window_height = 700
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_twentyone_game(self, e):
         """启动21点游戏"""
+        print("[DEBUG] _start_twentyone_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = TwentyOneGameUI(on_exit=on_exit)
-        
-        self.page.title = "21点游戏"
-        self.page.bgcolor = ft.Colors.PURPLE_900
-        self.page.window_width = 800
-        self.page.window_height = 600
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating TwentyOneGameUI...")
+            game_ui = TwentyOneGameUI(on_exit=on_exit)
+            print(f"[DEBUG] TwentyOneGameUI created: {type(game_ui)}")
+            
+            self.page.title = "21点游戏"
+            self.page.bgcolor = ft.Colors.PURPLE_900
+            self.page.window_width = 800
+            self.page.window_height = 600
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_minesweeper_game(self, e):
         """启动扫雷游戏"""
+        print("[DEBUG] _start_minesweeper_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = MinesweeperGameUI(on_exit=on_exit)
-        
-        self.page.title = "扫雷游戏"
-        self.page.bgcolor = ft.Colors.BLUE_GREY_800
-        self.page.window_width = 900
-        self.page.window_height = 700
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating MinesweeperGameUI...")
+            game_ui = MinesweeperGameUI(on_exit=on_exit)
+            print(f"[DEBUG] MinesweeperGameUI created: {type(game_ui)}")
+            
+            self.page.title = "扫雷游戏"
+            self.page.bgcolor = ft.Colors.BLUE_GREY_800
+            self.page.window_width = 900
+            self.page.window_height = 700
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_whackamole_game(self, e):
         """启动打地鼠游戏"""
+        print("[DEBUG] _start_whackamole_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = WhackAMoleGameUI(on_exit=on_exit)
-        
-        self.page.title = "打地鼠游戏"
-        self.page.bgcolor = ft.Colors.GREEN_900
-        self.page.window_width = 850
-        self.page.window_height = 700
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating WhackAMoleGameUI...")
+            game_ui = WhackAMoleGameUI(on_exit=on_exit)
+            print(f"[DEBUG] WhackAMoleGameUI created: {type(game_ui)}")
+            
+            self.page.title = "打地鼠游戏"
+            self.page.bgcolor = ft.Colors.GREEN_900
+            self.page.window_width = 850
+            self.page.window_height = 700
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_gomoku_game(self, e):
         """启动五子棋游戏"""
+        print("[DEBUG] _start_gomoku_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = GomokuGameUI(on_exit=on_exit)
-        
-        self.page.title = "五子棋游戏"
-        self.page.bgcolor = ft.Colors.BROWN_900
-        self.page.window_width = 900
-        self.page.window_height = 800
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating GomokuGameUI...")
+            game_ui = GomokuGameUI(on_exit=on_exit)
+            print(f"[DEBUG] GomokuGameUI created: {type(game_ui)}")
+            
+            self.page.title = "五子棋游戏"
+            self.page.bgcolor = ft.Colors.BROWN_900
+            self.page.window_width = 900
+            self.page.window_height = 800
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_sudoku_game(self, e):
         """启动数独游戏"""
+        print("[DEBUG] _start_sudoku_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = SudokuGameUI(on_exit=on_exit)
-        
-        self.page.title = "数独游戏"
-        self.page.bgcolor = ft.Colors.DEEP_ORANGE_900
-        self.page.window_width = 700
-        self.page.window_height = 800
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating SudokuGameUI...")
+            game_ui = SudokuGameUI(on_exit=on_exit)
+            print(f"[DEBUG] SudokuGameUI created: {type(game_ui)}")
+            
+            self.page.title = "数独游戏"
+            self.page.bgcolor = ft.Colors.DEEP_ORANGE_900
+            self.page.window_width = 700
+            self.page.window_height = 800
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_junqi_game(self, e):
         """启动军旗游戏"""
+        print("[DEBUG] _start_junqi_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = JunqiGameUI(on_exit=on_exit)
-        
-        self.page.title = "军旗游戏"
-        self.page.bgcolor = ft.Colors.BROWN_900
-        self.page.window_width = 900
-        self.page.window_height = 850
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating JunqiGameUI...")
+            game_ui = JunqiGameUI(on_exit=on_exit)
+            print(f"[DEBUG] JunqiGameUI created: {type(game_ui)}")
+            
+            self.page.title = "军旗游戏"
+            self.page.bgcolor = ft.Colors.BROWN_900
+            self.page.window_width = 900
+            self.page.window_height = 850
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_huarongdao_game(self, e):
         """启动华容道游戏"""
+        print("[DEBUG] _start_huarongdao_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = HuarongdaoGameUI(on_exit=on_exit)
-        
-        self.page.title = "华容道游戏"
-        self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 800
-        self.page.window_height = 850
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating HuarongdaoGameUI...")
+            game_ui = HuarongdaoGameUI(on_exit=on_exit)
+            print(f"[DEBUG] HuarongdaoGameUI created: {type(game_ui)}")
+            
+            self.page.title = "华容道游戏"
+            self.page.bgcolor = ft.Colors.BLUE_GREY_900
+            self.page.window_width = 800
+            self.page.window_height = 850
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _start_racing_game(self, e):
         """启动赛车游戏"""
+        print("[DEBUG] _start_racing_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = RacingGameUI(on_exit=on_exit)
-        
-        self.page.title = "极速赛车游戏"
-        self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 500
-        self.page.window_height = 750
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating RacingGameUI...")
+            game_ui = RacingGameUI(on_exit=on_exit)
+            print(f"[DEBUG] RacingGameUI created: {type(game_ui)}")
+            
+            self.page.title = "极速赛车游戏"
+            self.page.bgcolor = ft.Colors.BLUE_GREY_900
+            self.page.window_width = 500
+            self.page.window_height = 750
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
 
 
 def main():
@@ -677,7 +877,7 @@ def main():
 
     try:
         game_selector = GameSelector()
-        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8000)
+        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8080)
     except Exception as e:
         print(f"\nError: {e}")
         print("\n可能的解决方案:")
