@@ -368,25 +368,45 @@ class GameSelector:
     
     def _start_tetris_game(self, e):
         """启动俄罗斯方块游戏"""
+        print("[DEBUG] _start_tetris_game called")
         if self.page is None:
+            print("[DEBUG] page is None")
             return
         
-        self.page.clean()
-        
-        def on_exit():
-            self._show_selector_screen()
-        
-        game_ui = TetrisGameUI(on_exit=on_exit)
-        
-        self.page.title = "俄罗斯方块游戏"
-        self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 750
-        self.page.window_height = 850
-        
-        self.current_game_ui = game_ui
-        game_content = game_ui.build(self.page)
-        self.page.add(game_content)
-        game_ui.show()
+        try:
+            print("[DEBUG] Cleaning page...")
+            self.page.clean()
+            
+            def on_exit():
+                self._show_selector_screen()
+            
+            print("[DEBUG] Creating TetrisGameUI...")
+            game_ui = TetrisGameUI(on_exit=on_exit)
+            print(f"[DEBUG] TetrisGameUI created: {type(game_ui)}")
+            
+            self.page.title = "俄罗斯方块游戏"
+            self.page.bgcolor = ft.Colors.BLUE_GREY_900
+            self.page.window_width = 750
+            self.page.window_height = 850
+            
+            self.current_game_ui = game_ui
+            
+            print("[DEBUG] Calling build()...")
+            game_content = game_ui.build(self.page)
+            print(f"[DEBUG] build() returned: {type(game_content)}")
+            
+            print("[DEBUG] Adding to page...")
+            self.page.add(game_content)
+            print("[DEBUG] Added to page")
+            
+            print("[DEBUG] Calling show()...")
+            game_ui.show()
+            print("[DEBUG] show() completed")
+            
+        except Exception as ex:
+            print(f"[DEBUG] ERROR: {ex}")
+            import traceback
+            traceback.print_exc()
     
     def _show_selector_screen(self):
         """显示游戏选择页面"""
@@ -631,31 +651,35 @@ def main():
     """主函数"""
     import os
     import socket
+    import io
+
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
     print("=" * 50)
-    print("小游戏合集")
+    print("Tiny Game Collection")
     print("=" * 50)
-    print(f"Python 版本: {sys.version}")
-    print(f"工作目录: {os.getcwd()}")
-    print(f"Flet 版本: {ft.__version__}")
+    print(f"Python version: {sys.version}")
+    print(f"Working directory: {os.getcwd()}")
+    print(f"Flet version: {ft.__version__}")
     print("=" * 50)
-    print("正在启动游戏界面...")
+    print("Starting game interface...")
 
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
 
-    print(f"\n游戏界面访问地址:")
-    print(f"  - 本地访问: http://localhost:8000")
-    print(f"  - 局域网访问: http://{local_ip}:8000")
-    print(f"\n游戏将在浏览器中打开。")
-    print(f"如果浏览器没有自动打开，请手动访问上述 URL。")
+    print(f"\nGame interface access URLs:")
+    print(f"  - Local: http://localhost:8000")
+    print(f"  - Network: http://{local_ip}:8000")
+    print(f"\nGame will open in browser.")
+    print(f"If browser doesn't open automatically, please visit the URL above.")
     print("=" * 50)
 
     try:
         game_selector = GameSelector()
         ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8000)
     except Exception as e:
-        print(f"\n错误: {e}")
+        print(f"\nError: {e}")
         print("\n可能的解决方案:")
         print("1. 如果你在 WSL 中运行，请确保有图形界面支持，或者:")
         print("   - 使用 Windows 本地的 Python 环境运行")
