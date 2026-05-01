@@ -5547,7 +5547,7 @@ class JunqiGameUI:
                     ),
                     ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "棋盘大小: 12 × 12 (每方6×6区域)",
+                        "棋盘大小: 12行 × 5列 (每方6行区域)",
                         size=18,
                         color=ft.Colors.WHITE
                     ),
@@ -5745,9 +5745,9 @@ class JunqiGameUI:
         board_bg = ft.Container(
             width=total_width,
             height=total_height,
-            bgcolor=ft.Colors.BROWN_200,
-            border=ft.Border.all(4, ft.Colors.BROWN_800),
-            border_radius=10
+            bgcolor=ft.Colors.BROWN_100,
+            border=ft.Border.all(3, ft.Colors.BROWN_700),
+            border_radius=8
         )
         self.board_stack.controls.append(board_bg)
         
@@ -5758,22 +5758,27 @@ class JunqiGameUI:
             for x in range(self.game.BOARD_WIDTH):
                 pos = Position(x, y)
                 
-                is_railway = self.game.is_railway(pos)
                 is_camp = self.game.is_camp(pos)
                 
-                if is_camp:
-                    cell_bgcolor = ft.Colors.YELLOW_100
-                elif is_railway:
-                    cell_bgcolor = ft.Colors.BROWN_300
-                else:
-                    cell_bgcolor = ft.Colors.GREY_200
+                cell_bgcolor = ft.Colors.BEIGE_200
                 
                 border = ft.Border(
-                    top=ft.BorderSide(1, ft.Colors.BROWN_600),
-                    bottom=ft.BorderSide(1, ft.Colors.BROWN_600),
-                    left=ft.BorderSide(1, ft.Colors.BROWN_600),
-                    right=ft.BorderSide(1, ft.Colors.BROWN_600)
+                    top=ft.BorderSide(1, ft.Colors.BROWN_500),
+                    bottom=ft.BorderSide(1, ft.Colors.BROWN_500),
+                    left=ft.BorderSide(1, ft.Colors.BROWN_500),
+                    right=ft.BorderSide(1, ft.Colors.BROWN_500)
                 )
+                
+                cell_content = None
+                if is_camp:
+                    cell_content = ft.Container(
+                        width=self.CELL_SIZE * 0.6,
+                        height=self.CELL_SIZE * 0.6,
+                        bgcolor=ft.Colors.TRANSPARENT,
+                        border=ft.Border.all(2, ft.Colors.BROWN_600),
+                        border_radius=self.CELL_SIZE * 0.3,
+                        alignment=ft.Alignment(0, 0)
+                    )
                 
                 cell = ft.Container(
                     width=self.CELL_SIZE,
@@ -5781,6 +5786,7 @@ class JunqiGameUI:
                     bgcolor=cell_bgcolor,
                     border=border,
                     alignment=ft.Alignment(0, 0),
+                    content=cell_content,
                     on_click=lambda e, x=x, y=y: self._on_cell_click(x, y),
                     data={"x": x, "y": y}
                 )
@@ -6038,16 +6044,7 @@ class JunqiGameUI:
             for x in range(self.game.BOARD_WIDTH):
                 cell = self.cell_containers[y][x]
                 if cell:
-                    pos = Position(x, y)
-                    is_railway = self.game.is_railway(pos)
-                    is_camp = self.game.is_camp(pos)
-                    
-                    if is_camp:
-                        cell.bgcolor = ft.Colors.YELLOW_100
-                    elif is_railway:
-                        cell.bgcolor = ft.Colors.BROWN_300
-                    else:
-                        cell.bgcolor = ft.Colors.GREY_200
+                    cell.bgcolor = ft.Colors.BEIGE_200
                     cell.update()
         
         self._render_all_pieces()

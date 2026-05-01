@@ -134,13 +134,13 @@ class GamePhase(Enum):
 class JunqiGame(BaseGame):
     """军旗游戏类"""
 
-    BOARD_WIDTH = 12
+    BOARD_WIDTH = 5
     BOARD_HEIGHT = 12
 
-    PLAYER_TOP = 6
-    PLAYER_BOTTOM = 11
-    AI_TOP = 0
-    AI_BOTTOM = 5
+    RED_TOP = 6
+    RED_BOTTOM = 11
+    BLUE_TOP = 0
+    BLUE_BOTTOM = 5
 
     def __init__(self):
         super().__init__("军旗")
@@ -190,33 +190,31 @@ class JunqiGame(BaseGame):
         pieces = []
 
         if side == PlayerSide.RED:
-            base_y = 11
-            flag_x = 5
-            mine_positions = [(4, 11), (6, 11), (5, 10)]
-            bomb_positions = [(3, 10), (8, 10)]
-            engineer_positions = [(1, 8), (5, 8), (10, 8)]
-            platoon_positions = [(2, 8), (4, 8), (9, 8)]
-            company_positions = [(3, 9), (7, 9), (6, 8)]
-            battalion_positions = [(0, 7), (11, 7)]
-            regiment_positions = [(2, 9), (8, 9)]
-            brigade_positions = [(1, 9), (9, 9)]
-            division_positions = [(0, 9), (10, 9)]
-            corps_position = (1, 10)
-            commander_position = (10, 10)
+            mine_positions = [(0, 11), (4, 11), (2, 10)]
+            bomb_positions = [(1, 10), (3, 10)]
+            engineer_positions = [(0, 8), (4, 8), (2, 6)]
+            platoon_positions = [(1, 8), (3, 8), (4, 6)]
+            company_positions = [(0, 9), (4, 9), (0, 6)]
+            battalion_positions = [(0, 7), (4, 7)]
+            regiment_positions = [(2, 9), (3, 6)]
+            brigade_positions = [(2, 7), (1, 6)]
+            division_positions = [(0, 10), (4, 10)]
+            corps_position = (1, 11)
+            commander_position = (3, 11)
+            flag_position = (2, 11)
         else:
-            base_y = 0
-            flag_x = 6
-            mine_positions = [(7, 0), (5, 0), (6, 1)]
-            bomb_positions = [(8, 1), (3, 1)]
-            engineer_positions = [(10, 3), (6, 3), (1, 3)]
-            platoon_positions = [(9, 3), (7, 3), (2, 3)]
-            company_positions = [(4, 2), (8, 2), (5, 3)]
-            battalion_positions = [(0, 4), (11, 4)]
-            regiment_positions = [(3, 2), (9, 2)]
-            brigade_positions = [(2, 2), (10, 2)]
-            division_positions = [(1, 2), (11, 2)]
-            corps_position = (10, 1)
-            commander_position = (1, 1)
+            mine_positions = [(0, 0), (4, 0), (2, 1)]
+            bomb_positions = [(1, 1), (3, 1)]
+            engineer_positions = [(0, 3), (4, 3), (2, 5)]
+            platoon_positions = [(1, 3), (3, 3), (4, 5)]
+            company_positions = [(0, 2), (4, 2), (0, 5)]
+            battalion_positions = [(0, 4), (4, 4)]
+            regiment_positions = [(2, 2), (3, 5)]
+            brigade_positions = [(2, 4), (1, 5)]
+            division_positions = [(0, 1), (4, 1)]
+            corps_position = (1, 0)
+            commander_position = (3, 0)
+            flag_position = (2, 0)
 
         def add_piece(piece_type: PieceType, x: int, y: int):
             piece = Piece(piece_type, side, Position(x, y))
@@ -224,7 +222,7 @@ class JunqiGame(BaseGame):
             self.board[y][x] = piece
             self.pieces[side].append(piece)
 
-        add_piece(PieceType.FLAG, flag_x, base_y)
+        add_piece(PieceType.FLAG, flag_position[0], flag_position[1])
 
         for x, y in mine_positions:
             add_piece(PieceType.MINE, x, y)
@@ -279,15 +277,15 @@ class JunqiGame(BaseGame):
         """获取某方的行营位置"""
         if side == PlayerSide.RED:
             return [
-                (2, 7), (4, 7),
-                (7, 7), (9, 7),
-                (5, 8)
+                (1, 7), (3, 7),
+                (2, 8),
+                (1, 9), (3, 9)
             ]
         else:
             return [
-                (2, 4), (4, 4),
-                (7, 4), (9, 4),
-                (5, 3)
+                (1, 2), (3, 2),
+                (2, 3),
+                (1, 4), (3, 4)
             ]
 
     def is_camp(self, pos: Position) -> bool:
@@ -299,9 +297,9 @@ class JunqiGame(BaseGame):
     def get_base_positions(self, side: PlayerSide) -> List[Tuple[int, int]]:
         """获取某方的大本营位置"""
         if side == PlayerSide.RED:
-            return [(5, 11), (6, 11)]
+            return [(0, 11), (2, 11), (4, 11)]
         else:
-            return [(5, 0), (6, 0)]
+            return [(0, 0), (2, 0), (4, 0)]
 
     def is_base(self, pos: Position, side: PlayerSide) -> bool:
         """判断位置是否是某方的大本营"""
@@ -312,30 +310,21 @@ class JunqiGame(BaseGame):
         if side == PlayerSide.RED:
             positions = []
             for y in range(6, 12):
-                if y in [7, 9]:
-                    for x in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
-                        if (x, y) not in self.get_camp_positions(PlayerSide.RED):
-                            positions.append((x, y))
-                else:
-                    for x in range(12):
+                for x in range(5):
+                    if not self.is_camp(Position(x, y)):
                         positions.append((x, y))
             return positions
         else:
             positions = []
             for y in range(0, 6):
-                if y in [3, 5]:
-                    for x in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
-                        if (x, y) not in self.get_camp_positions(PlayerSide.BLUE):
-                            positions.append((x, y))
-                else:
-                    for x in range(12):
+                for x in range(5):
+                    if not self.is_camp(Position(x, y)):
                         positions.append((x, y))
             return positions
 
     def can_place_piece(self, piece_type: PieceType, x: int, y: int, side: PlayerSide) -> bool:
         """判断棋子是否可以放置在某个位置"""
-        valid_positions = self.get_valid_layout_positions(side)
-        if (x, y) not in valid_positions:
+        if self.is_camp(Position(x, y)):
             return False
 
         base_positions = self.get_base_positions(side)
@@ -354,9 +343,6 @@ class JunqiGame(BaseGame):
             else:
                 return y > 0
 
-        if (x, y) in base_positions:
-            return False
-
         return True
 
     def swap_pieces_for_layout(self, x1: int, y1: int, x2: int, y2: int) -> bool:
@@ -371,6 +357,9 @@ class JunqiGame(BaseGame):
             return False
 
         if piece2 and piece2.side != PlayerSide.RED:
+            return False
+
+        if self.is_camp(Position(x1, y1)) or self.is_camp(Position(x2, y2)):
             return False
 
         if piece2 is None:
@@ -414,11 +403,9 @@ class JunqiGame(BaseGame):
         if not self.is_valid_position(pos.x, pos.y):
             return False
 
-        if pos.y in [1, 2, 5, 6, 7, 10, 11]:
+        if pos.y in [1, 5, 6, 10]:
             return True
-        if pos.x in [0, 11] and pos.y in [3, 4, 5, 6, 7, 8]:
-            return True
-        if pos.x in [5, 6] and pos.y in [3, 4, 5, 6, 7, 8]:
+        if pos.x in [0, 4] and pos.y in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
             return True
 
         return False
@@ -458,19 +445,20 @@ class JunqiGame(BaseGame):
         dy = abs(to_pos.y - from_pos.y)
 
         if (dx == 1 and dy == 0) or (dx == 0 and dy == 1):
-            return True
+            if not self.is_camp(from_pos) and not self.is_camp(to_pos):
+                return True
 
         camp_adjacent = {
-            (2, 4): [(2, 5), (3, 4), (1, 4)],
-            (4, 4): [(4, 5), (3, 4), (5, 4)],
-            (7, 4): [(7, 5), (6, 4), (8, 4)],
-            (9, 4): [(9, 5), (8, 4), (10, 4)],
-            (5, 3): [(5, 4), (4, 3), (6, 3)],
-            (2, 7): [(2, 6), (3, 7), (1, 7)],
-            (4, 7): [(4, 6), (3, 7), (5, 7)],
-            (7, 7): [(7, 6), (6, 7), (8, 7)],
-            (9, 7): [(9, 6), (8, 7), (10, 7)],
-            (5, 8): [(5, 7), (4, 8), (6, 8)]
+            (1, 2): [(0, 2), (1, 1), (1, 3), (2, 2)],
+            (3, 2): [(2, 2), (3, 1), (3, 3), (4, 2)],
+            (2, 3): [(1, 3), (2, 2), (2, 4), (3, 3)],
+            (1, 4): [(0, 4), (1, 3), (1, 5), (2, 4)],
+            (3, 4): [(2, 4), (3, 3), (3, 5), (4, 4)],
+            (1, 7): [(0, 7), (1, 6), (1, 8), (2, 7)],
+            (3, 7): [(2, 7), (3, 6), (3, 8), (4, 7)],
+            (2, 8): [(1, 8), (2, 7), (2, 9), (3, 8)],
+            (1, 9): [(0, 9), (1, 8), (1, 10), (2, 9)],
+            (3, 9): [(2, 9), (3, 8), (3, 10), (4, 9)],
         }
 
         from_tuple = from_pos.to_tuple()
@@ -644,6 +632,9 @@ class JunqiGame(BaseGame):
     def get_ai_move(self) -> Optional[Tuple[Position, Position]]:
         """获取AI走棋"""
         if self.game_over or self.phase != GamePhase.PLAYING:
+            return None
+
+        if self.current_player != PlayerSide.BLUE:
             return None
 
         ai_pieces = [p for p in self.pieces[PlayerSide.BLUE] if p.is_alive and p.can_move()]
