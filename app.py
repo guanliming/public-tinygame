@@ -6750,8 +6750,8 @@ class GameSelector:
         page.theme_mode = ft.ThemeMode.LIGHT
         page.bgcolor = ft.Colors.BLUE_GREY_900
         page.padding = 20
-        page.window_width = 900
-        page.window_height = 700
+        page.window_width = 950
+        page.window_height = 800
         page.window_resizable = True
         
         self._show_selector_screen()
@@ -7137,8 +7137,8 @@ class GameSelector:
         
         self.page.title = "小游戏合集"
         self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 900
-        self.page.window_height = 700
+        self.page.window_width = 950
+        self.page.window_height = 800
         self.page.on_keyboard_event = None
         
         selector_ui = self._build_selector_ui()
