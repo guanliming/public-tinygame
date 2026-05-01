@@ -228,9 +228,8 @@ class WhackAMoleGameUI:
         self.game_screen.visible = False
         self.game_over_screen.visible = False
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _show_game_screen(self):
         """显示游戏界面"""
@@ -238,9 +237,8 @@ class WhackAMoleGameUI:
         self.game_screen.visible = True
         self.game_over_screen.visible = False
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _show_game_over_screen(self):
         """显示游戏结束界面"""
@@ -248,9 +246,8 @@ class WhackAMoleGameUI:
         self.game_screen.visible = False
         self.game_over_screen.visible = True
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _start_game(self, e):
         """开始游戏"""

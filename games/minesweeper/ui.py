@@ -232,9 +232,8 @@ class MinesweeperGameUI:
         self.game_screen.visible = False
         self.game_over_screen.visible = False
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _show_game_screen(self):
         """显示游戏界面"""
@@ -242,9 +241,8 @@ class MinesweeperGameUI:
         self.game_screen.visible = True
         self.game_over_screen.visible = False
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _show_game_over_screen(self, won: bool = False):
         """显示游戏结束界面"""
@@ -261,9 +259,8 @@ class MinesweeperGameUI:
             self.game_over_screen.content.controls[0].color = ft.Colors.RED
             self.game_over_score_text.value = "你踩到了地雷！"
         
-        self.welcome_screen.update()
-        self.game_screen.update()
-        self.game_over_screen.update()
+        if self.page:
+            self.page.update()
     
     def _start_game(self, e):
         """开始游戏"""
