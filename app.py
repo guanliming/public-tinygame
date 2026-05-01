@@ -5535,9 +5535,14 @@ class JunqiGameUI:
                     ),
                     ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "棋盘大小: 12 × 10",
+                        "棋盘大小: 12 × 12 (每方6×6区域)",
                         size=18,
                         color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "暗棋模式: 对方棋子不可见，战斗后揭示",
+                        size=16,
+                        color=ft.Colors.GREY_400
                     ),
                     ft.Text(
                         "玩家: 红方（先手）",
@@ -5813,14 +5818,24 @@ class JunqiGameUI:
             except:
                 pass
         
-        if piece.side == PlayerSide.RED:
-            bg_color = ft.Colors.RED_100
-            border_color = ft.Colors.RED_700
-            text_color = ft.Colors.RED_900
+        is_visible = self.game.is_piece_visible(piece, PlayerSide.RED)
+        
+        if is_visible:
+            if piece.side == PlayerSide.RED:
+                bg_color = ft.Colors.RED_100
+                border_color = ft.Colors.RED_700
+                text_color = ft.Colors.RED_900
+                display_text = piece.get_name()
+            else:
+                bg_color = ft.Colors.BLUE_100
+                border_color = ft.Colors.BLUE_700
+                text_color = ft.Colors.BLUE_900
+                display_text = piece.get_name()
         else:
-            bg_color = ft.Colors.BLUE_100
-            border_color = ft.Colors.BLUE_700
-            text_color = ft.Colors.BLUE_900
+            bg_color = ft.Colors.GREY_500
+            border_color = ft.Colors.GREY_700
+            text_color = ft.Colors.WHITE
+            display_text = "?"
         
         piece_left = self.BOARD_PADDING + x * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
         piece_top = self.BOARD_PADDING + y * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
@@ -5838,7 +5853,7 @@ class JunqiGameUI:
             left=piece_left,
             top=piece_top,
             content=ft.Text(
-                piece.get_name(),
+                display_text,
                 size=11,
                 color=text_color,
                 weight=ft.FontWeight.BOLD
