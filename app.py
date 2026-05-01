@@ -25,8 +25,8 @@ from games.lianliankan import LianliankanGame, CardState, FruitType
 class LianliankanGameUI:
     """连连看游戏界面"""
     
-    CELL_SIZE = 90
-    BOARD_PADDING = 20
+    CELL_SIZE = 180
+    BOARD_PADDING = 40
     
     FRUIT_EMOJIS = {
         FruitType.APPLE: "🍎",
@@ -7380,8 +7380,8 @@ class GameSelector:
         
         self.page.title = "连连看游戏"
         self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 800
-        self.page.window_height = 750
+        self.page.window_width = 1200
+        self.page.window_height = 1050
         
         self.current_game_ui = game_ui
         game_content = game_ui.build(self.page)
