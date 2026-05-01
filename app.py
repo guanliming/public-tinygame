@@ -5524,6 +5524,18 @@ class JunqiGameUI:
             )
         )
         
+        self.start_battle_button = ft.Button(
+            "开始对战",
+            on_click=self._start_battle_phase,
+            width=120,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
         self.welcome_screen = ft.Container(
             content=ft.Column(
                 [
@@ -5603,7 +5615,7 @@ class JunqiGameUI:
             content=ft.Column(
                 [
                     ft.Row(
-                        [self.message_text, ft.Container(expand=True), self.save_button, self.game_exit_button],
+                        [self.message_text, ft.Container(expand=True), self.start_battle_button, self.save_button, self.game_exit_button],
                         alignment=ft.MainAxisAlignment.CENTER
                     ),
                     ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
@@ -5704,12 +5716,17 @@ class JunqiGameUI:
         self.game.init_game()
         self.game.setup_default_board()
         self.game.is_running = True
+        self.game.phase = GamePhase.LAYOUT
         
         self.selected_piece = None
         self.valid_moves = []
         
         self._build_game_board()
-        self._update_message("你的回合 - 点击己方棋子选择移动")
+        self._update_message("布局阶段 - 点击两个棋子交换位置，或点击棋子和空格移动棋子")
+        
+        if self.start_battle_button:
+            self.start_battle_button.visible = True
+            self.start_battle_button.update()
         
         self._show_game_screen()
     
@@ -5875,9 +5892,26 @@ class JunqiGameUI:
             self.message_text.value = message
             self.message_text.update()
     
+    def _start_battle_phase(self, e):
+        """开始对战阶段"""
+        if not self.game or self.game.phase != GamePhase.LAYOUT:
+            return
+        
+        self.game.start_play_phase()
+        
+        if self.start_battle_button:
+            self.start_battle_button.visible = False
+            self.start_battle_button.update()
+        
+        self._update_message("你的回合 - 点击己方棋子选择移动")
+    
     def _on_cell_click(self, x: int, y: int):
         """格子点击事件"""
         if not self.game or not self.game.is_running:
+            return
+        
+        if self.game.phase == GamePhase.LAYOUT:
+            self._on_layout_click(x, y)
             return
         
         if self.game.current_player != PlayerSide.RED:
@@ -5934,6 +5968,54 @@ class JunqiGameUI:
                 self.valid_moves = []
                 self._clear_highlight()
                 self._update_message("已取消选择 - 点击己方棋子重新选择")
+    
+    def _on_layout_click(self, x: int, y: int):
+        """布局阶段的点击事件"""
+        clicked_piece = self.game.board[y][x]
+        
+        if clicked_piece and clicked_piece.side == PlayerSide.RED:
+            if self.selected_piece:
+                from_x, from_y = self.selected_piece
+                if from_x == x and from_y == y:
+                    self.selected_piece = None
+                    self._clear_highlight()
+                    self._update_message("布局阶段 - 点击两个棋子交换位置，或点击棋子和空格移动棋子")
+                else:
+                    success = self.game.swap_pieces_for_layout(from_x, from_y, x, y)
+                    if success:
+                        self.selected_piece = None
+                        self._clear_highlight()
+                        self._render_all_pieces()
+                        self._update_message("棋子已交换！继续布局或点击'开始对战'")
+                    else:
+                        self._update_message("无法交换该位置！")
+            else:
+                self.selected_piece = (x, y)
+                self._highlight_layout_position(x, y)
+                self._update_message(f"已选择: {clicked_piece.get_name()} - 点击目标位置交换")
+        else:
+            if self.selected_piece:
+                from_x, from_y = self.selected_piece
+                success = self.game.swap_pieces_for_layout(from_x, from_y, x, y)
+                if success:
+                    self.selected_piece = None
+                    self._clear_highlight()
+                    self._render_all_pieces()
+                    self._update_message("棋子已移动！继续布局或点击'开始对战'")
+                else:
+                    self._update_message("无法移动到该位置！")
+            else:
+                self._update_message("请先点击己方棋子进行选择")
+    
+    def _highlight_layout_position(self, x: int, y: int):
+        """高亮布局阶段选中的位置"""
+        if not self.cell_containers:
+            return
+        
+        cell = self.cell_containers[y][x]
+        if cell:
+            cell.bgcolor = ft.Colors.GREEN_200
+            cell.update()
     
     def _highlight_valid_moves(self):
         """高亮显示有效移动位置"""

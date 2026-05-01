@@ -121,7 +121,7 @@ class Move:
         self.to_pos = to_pos
         self.piece = piece
         self.captured_piece = captured_piece
-        self.result = None  # "capture", "both_die", "die", "flag_capture"
+        self.result = None
 
 
 class GamePhase(Enum):
@@ -136,11 +136,11 @@ class JunqiGame(BaseGame):
 
     BOARD_WIDTH = 12
     BOARD_HEIGHT = 12
-    
-    RED_AREA_TOP = 0
-    RED_AREA_BOTTOM = 5
-    BLUE_AREA_TOP = 6
-    BLUE_AREA_BOTTOM = 11
+
+    PLAYER_TOP = 6
+    PLAYER_BOTTOM = 11
+    AI_TOP = 0
+    AI_BOTTOM = 5
 
     def __init__(self):
         super().__init__("军旗")
@@ -155,8 +155,8 @@ class JunqiGame(BaseGame):
         self.moves: List[Move] = []
         self.last_ai_move: Optional[Move] = None
         self.phase: GamePhase = GamePhase.LAYOUT
-        self.layout_player: PlayerSide = PlayerSide.RED
         self.revealed_pieces: Dict[Tuple[int, int], bool] = {}
+        self.selected_piece_for_layout: Optional[Tuple[int, int]] = None
 
     def init_game(self) -> None:
         """初始化游戏"""
@@ -172,18 +172,13 @@ class JunqiGame(BaseGame):
         self.last_ai_move = None
         self.is_running = False
         self.phase = GamePhase.LAYOUT
-        self.layout_player = PlayerSide.RED
         self.revealed_pieces = {}
+        self.selected_piece_for_layout = None
 
     def start(self) -> None:
         """开始游戏"""
         self.init_game()
         self.is_running = True
-
-    def start_play_phase(self) -> None:
-        """开始对战阶段"""
-        self.phase = GamePhase.PLAYING
-        self.current_player = PlayerSide.RED
 
     def setup_default_board(self) -> None:
         """设置默认棋盘布局"""
@@ -192,76 +187,76 @@ class JunqiGame(BaseGame):
         self.phase = GamePhase.PLAYING
 
     def _generate_default_pieces(self, side: PlayerSide) -> List[Piece]:
-        """生成默认棋子布局（每方6×6区域）"""
+        """生成默认棋子布局"""
         pieces = []
-        
+
         if side == PlayerSide.RED:
-            base_y = 0
+            base_y = 11
             flag_x = 5
-            mine_positions = [(4, 0), (6, 0), (5, 1)]
-            bomb_positions = [(3, 0), (8, 0)]
-            engineer_positions = [(1, 2), (5, 2), (10, 2)]
-            platoon_positions = [(2, 2), (4, 2), (9, 2)]
-            company_positions = [(3, 1), (7, 1), (6, 2)]
-            battalion_positions = [(0, 3), (11, 3)]
-            regiment_positions = [(2, 1), (8, 1)]
-            brigade_positions = [(1, 1), (9, 1)]
-            division_positions = [(0, 1), (10, 1)]
-            corps_position = (1, 0)
-            commander_position = (10, 0)
+            mine_positions = [(4, 11), (6, 11), (5, 10)]
+            bomb_positions = [(3, 10), (8, 10)]
+            engineer_positions = [(1, 8), (5, 8), (10, 8)]
+            platoon_positions = [(2, 8), (4, 8), (9, 8)]
+            company_positions = [(3, 9), (7, 9), (6, 8)]
+            battalion_positions = [(0, 7), (11, 7)]
+            regiment_positions = [(2, 9), (8, 9)]
+            brigade_positions = [(1, 9), (9, 9)]
+            division_positions = [(0, 9), (10, 9)]
+            corps_position = (1, 10)
+            commander_position = (10, 10)
         else:
-            base_y = 6
+            base_y = 0
             flag_x = 6
-            mine_positions = [(7, 11), (5, 11), (6, 10)]
-            bomb_positions = [(8, 11), (3, 11)]
-            engineer_positions = [(10, 9), (6, 9), (1, 9)]
-            platoon_positions = [(9, 9), (7, 9), (2, 9)]
-            company_positions = [(8, 10), (4, 10), (5, 9)]
-            battalion_positions = [(11, 8), (0, 8)]
-            regiment_positions = [(9, 10), (3, 10)]
-            brigade_positions = [(10, 10), (2, 10)]
-            division_positions = [(11, 10), (1, 10)]
-            corps_position = (10, 11)
-            commander_position = (1, 11)
-        
+            mine_positions = [(7, 0), (5, 0), (6, 1)]
+            bomb_positions = [(8, 1), (3, 1)]
+            engineer_positions = [(10, 3), (6, 3), (1, 3)]
+            platoon_positions = [(9, 3), (7, 3), (2, 3)]
+            company_positions = [(4, 2), (8, 2), (5, 3)]
+            battalion_positions = [(0, 4), (11, 4)]
+            regiment_positions = [(3, 2), (9, 2)]
+            brigade_positions = [(2, 2), (10, 2)]
+            division_positions = [(1, 2), (11, 2)]
+            corps_position = (10, 1)
+            commander_position = (1, 1)
+
         def add_piece(piece_type: PieceType, x: int, y: int):
             piece = Piece(piece_type, side, Position(x, y))
             pieces.append(piece)
             self.board[y][x] = piece
             self.pieces[side].append(piece)
-        
-        add_piece(PieceType.FLAG, flag_x, base_y if side == PlayerSide.RED else 11)
-        
+
+        add_piece(PieceType.FLAG, flag_x, base_y)
+
         for x, y in mine_positions:
             add_piece(PieceType.MINE, x, y)
-        
+
         for x, y in bomb_positions:
             add_piece(PieceType.BOMB, x, y)
-        
+
         for x, y in engineer_positions:
             add_piece(PieceType.ENGINEER, x, y)
-        
+
         for x, y in platoon_positions:
             add_piece(PieceType.PLATOON, x, y)
-        
+
         for x, y in company_positions:
             add_piece(PieceType.COMPANY, x, y)
-        
+
         for x, y in battalion_positions:
             add_piece(PieceType.BATTALION, x, y)
-        
+
         for x, y in regiment_positions:
             add_piece(PieceType.REGIMENT, x, y)
-        
+
         for x, y in brigade_positions:
             add_piece(PieceType.BRIGADE, x, y)
-        
+
         for x, y in division_positions:
             add_piece(PieceType.DIVISION, x, y)
-        
+
         add_piece(PieceType.CORPS, corps_position[0], corps_position[1])
         add_piece(PieceType.COMMANDER, commander_position[0], commander_position[1])
-        
+
         return pieces
 
     def is_piece_visible(self, piece: Piece, viewer: PlayerSide) -> bool:
@@ -275,35 +270,168 @@ class JunqiGame(BaseGame):
         """揭示棋子（战斗后或特殊情况）"""
         self.revealed_pieces[(x, y)] = True
 
+    def is_valid_position(self, x: int, y: int) -> bool:
+        """判断是否是有效棋盘位置"""
+        if x < 0 or x >= self.BOARD_WIDTH or y < 0 or y >= self.BOARD_HEIGHT:
+            return False
+        return True
+
+    def get_camp_positions(self, side: PlayerSide) -> List[Tuple[int, int]]:
+        """获取某方的行营位置"""
+        if side == PlayerSide.RED:
+            return [
+                (2, 7), (4, 7),
+                (7, 7), (9, 7),
+                (5, 8)
+            ]
+        else:
+            return [
+                (2, 4), (4, 4),
+                (7, 4), (9, 4),
+                (5, 3)
+            ]
+
+    def is_camp(self, pos: Position) -> bool:
+        """判断位置是否是行营"""
+        red_camps = self.get_camp_positions(PlayerSide.RED)
+        blue_camps = self.get_camp_positions(PlayerSide.BLUE)
+        return pos.to_tuple() in red_camps or pos.to_tuple() in blue_camps
+
+    def get_base_positions(self, side: PlayerSide) -> List[Tuple[int, int]]:
+        """获取某方的大本营位置"""
+        if side == PlayerSide.RED:
+            return [(5, 11), (6, 11)]
+        else:
+            return [(5, 0), (6, 0)]
+
+    def is_base(self, pos: Position, side: PlayerSide) -> bool:
+        """判断位置是否是某方的大本营"""
+        return pos.to_tuple() in self.get_base_positions(side)
+
+    def get_valid_layout_positions(self, side: PlayerSide) -> List[Tuple[int, int]]:
+        """获取某方可以布局的位置（兵站和大本营）"""
+        if side == PlayerSide.RED:
+            positions = []
+            for y in range(6, 12):
+                if y in [7, 9]:
+                    for x in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
+                        if (x, y) not in self.get_camp_positions(PlayerSide.RED):
+                            positions.append((x, y))
+                else:
+                    for x in range(12):
+                        positions.append((x, y))
+            return positions
+        else:
+            positions = []
+            for y in range(0, 6):
+                if y in [3, 5]:
+                    for x in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
+                        if (x, y) not in self.get_camp_positions(PlayerSide.BLUE):
+                            positions.append((x, y))
+                else:
+                    for x in range(12):
+                        positions.append((x, y))
+            return positions
+
+    def can_place_piece(self, piece_type: PieceType, x: int, y: int, side: PlayerSide) -> bool:
+        """判断棋子是否可以放置在某个位置"""
+        valid_positions = self.get_valid_layout_positions(side)
+        if (x, y) not in valid_positions:
+            return False
+
+        base_positions = self.get_base_positions(side)
+        if piece_type == PieceType.FLAG:
+            return (x, y) in base_positions
+
+        if piece_type == PieceType.MINE:
+            if side == PlayerSide.RED:
+                return y >= 10
+            else:
+                return y <= 1
+
+        if piece_type == PieceType.BOMB:
+            if side == PlayerSide.RED:
+                return y < 11
+            else:
+                return y > 0
+
+        if (x, y) in base_positions:
+            return False
+
+        return True
+
+    def swap_pieces_for_layout(self, x1: int, y1: int, x2: int, y2: int) -> bool:
+        """布局阶段交换两个棋子的位置"""
+        if self.phase != GamePhase.LAYOUT:
+            return False
+
+        piece1 = self.board[y1][x1]
+        piece2 = self.board[y2][x2]
+
+        if piece1 and piece1.side != PlayerSide.RED:
+            return False
+
+        if piece2 and piece2.side != PlayerSide.RED:
+            return False
+
+        if piece2 is None:
+            if piece1 is None:
+                return False
+            if not self.can_place_piece(piece1.piece_type, x2, y2, PlayerSide.RED):
+                return False
+
+            self.board[y2][x2] = piece1
+            self.board[y1][x1] = None
+            piece1.position = Position(x2, y2)
+            return True
+        else:
+            if piece1 is None:
+                if not self.can_place_piece(piece2.piece_type, x1, y1, PlayerSide.RED):
+                    return False
+
+                self.board[y1][x1] = piece2
+                self.board[y2][x2] = None
+                piece2.position = Position(x1, y1)
+                return True
+            else:
+                if not self.can_place_piece(piece1.piece_type, x2, y2, PlayerSide.RED):
+                    return False
+                if not self.can_place_piece(piece2.piece_type, x1, y1, PlayerSide.RED):
+                    return False
+
+                self.board[y1][x1] = piece2
+                self.board[y2][x2] = piece1
+                piece1.position = Position(x2, y2)
+                piece2.position = Position(x1, y1)
+                return True
+
+    def start_play_phase(self) -> None:
+        """开始对战阶段"""
+        self.phase = GamePhase.PLAYING
+        self.current_player = PlayerSide.RED
+
     def is_railway(self, pos: Position) -> bool:
         """判断位置是否在铁路线上"""
-        if pos.x < 0 or pos.x >= self.BOARD_WIDTH or pos.y < 0 or pos.y >= self.BOARD_HEIGHT:
+        if not self.is_valid_position(pos.x, pos.y):
             return False
-        
+
         if pos.y in [1, 2, 9, 10]:
             return True
         if pos.x in [0, 11] and pos.y in [3, 4, 5, 6, 7, 8]:
             return True
         if pos.x in [5, 6] and pos.y in [3, 4, 5, 6, 7, 8]:
             return True
-        
-        return False
 
-    def is_camp(self, pos: Position) -> bool:
-        """判断位置是否是行营"""
-        camp_positions = [
-            (2, 3), (4, 3), (3, 4),
-            (7, 3), (9, 3), (8, 4),
-            (2, 8), (4, 8), (3, 7),
-            (7, 8), (9, 8), (8, 7)
-        ]
-        return pos.to_tuple() in camp_positions
+        return False
 
     def is_valid_move(self, from_pos: Position, to_pos: Position) -> bool:
         """判断走棋是否有效"""
+        if self.phase != GamePhase.PLAYING:
+            return False
+
         if from_pos == to_pos:
             return False
-        
+
         piece = self.board[from_pos.y][from_pos.x]
         if not piece or not piece.is_alive:
             return False
@@ -311,58 +439,56 @@ class JunqiGame(BaseGame):
             return False
         if not piece.can_move():
             return False
-        
+
         to_piece = self.board[to_pos.y][to_pos.x]
         if to_piece and to_piece.is_alive and to_piece.side == piece.side:
             return False
         if to_piece and to_piece.is_alive and self.is_camp(to_pos):
             return False
-        
+
         if self.is_on_road(from_pos, to_pos, piece):
             return True
         if self.is_on_railway(from_pos, to_pos, piece):
             return True
-        
+
         return False
 
     def is_on_road(self, from_pos: Position, to_pos: Position, piece: Piece) -> bool:
         """判断是否是公路移动（一步）"""
         dx = abs(to_pos.x - from_pos.x)
         dy = abs(to_pos.y - from_pos.y)
-        
+
         if (dx == 1 and dy == 0) or (dx == 0 and dy == 1):
             return True
-        
+
         camp_adjacent = {
-            (2, 3): [(2, 4), (3, 3), (1, 3)],
-            (4, 3): [(4, 4), (3, 3), (5, 3)],
-            (3, 4): [(2, 4), (4, 4), (3, 3), (3, 5)],
-            (7, 3): [(7, 4), (6, 3), (8, 3)],
-            (9, 3): [(9, 4), (8, 3), (10, 3)],
-            (8, 4): [(7, 4), (9, 4), (8, 3), (8, 5)],
-            (2, 8): [(2, 7), (1, 8), (3, 8)],
-            (4, 8): [(4, 7), (3, 8), (5, 8)],
-            (3, 7): [(2, 7), (4, 7), (3, 6), (3, 8)],
-            (7, 8): [(7, 7), (6, 8), (8, 8)],
-            (9, 8): [(9, 7), (8, 8), (10, 8)],
-            (8, 7): [(7, 7), (9, 7), (8, 6), (8, 8)]
+            (2, 4): [(2, 5), (3, 4), (1, 4)],
+            (4, 4): [(4, 5), (3, 4), (5, 4)],
+            (7, 4): [(7, 5), (6, 4), (8, 4)],
+            (9, 4): [(9, 5), (8, 4), (10, 4)],
+            (5, 3): [(5, 4), (4, 3), (6, 3)],
+            (2, 7): [(2, 6), (3, 7), (1, 7)],
+            (4, 7): [(4, 6), (3, 7), (5, 7)],
+            (7, 7): [(7, 6), (6, 7), (8, 7)],
+            (9, 7): [(9, 6), (8, 7), (10, 7)],
+            (5, 8): [(5, 7), (4, 8), (6, 8)]
         }
-        
+
         from_tuple = from_pos.to_tuple()
         to_tuple = to_pos.to_tuple()
-        
+
         if from_tuple in camp_adjacent and to_tuple in camp_adjacent[from_tuple]:
             return True
         if to_tuple in camp_adjacent and from_tuple in camp_adjacent[to_tuple]:
             return True
-        
+
         return False
 
     def is_on_railway(self, from_pos: Position, to_pos: Position, piece: Piece) -> bool:
         """判断是否是铁路移动"""
         if not self.is_railway(from_pos) or not self.is_railway(to_pos):
             return False
-        
+
         if piece.piece_type == PieceType.ENGINEER:
             return self._engineer_railway_move(from_pos, to_pos)
         else:
@@ -372,7 +498,7 @@ class JunqiGame(BaseGame):
         """普通棋子铁路移动（直线）"""
         if from_pos.x != to_pos.x and from_pos.y != to_pos.y:
             return False
-        
+
         if from_pos.x == to_pos.x:
             min_y = min(from_pos.y, to_pos.y)
             max_y = max(from_pos.y, to_pos.y)
@@ -385,28 +511,28 @@ class JunqiGame(BaseGame):
             for x in range(min_x + 1, max_x):
                 if self.board[from_pos.y][x] and self.board[from_pos.y][x].is_alive:
                     return False
-        
+
         return True
 
     def _engineer_railway_move(self, from_pos: Position, to_pos: Position) -> bool:
         """工兵铁路移动（可转弯）"""
         if from_pos == to_pos:
             return False
-        
+
         visited = set()
         queue = [from_pos]
         visited.add(from_pos.to_tuple())
-        
+
         while queue:
             current = queue.pop(0)
-            
+
             if current == to_pos:
                 return True
-            
+
             for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 next_pos = Position(current.x + dx, current.y + dy)
                 next_tuple = next_pos.to_tuple()
-                
+
                 if next_tuple in visited:
                     continue
                 if not self.is_railway(next_pos):
@@ -414,10 +540,10 @@ class JunqiGame(BaseGame):
                 if self.board[next_pos.y][next_pos.x] and self.board[next_pos.y][next_pos.x].is_alive:
                     if next_pos != to_pos:
                         continue
-                
+
                 visited.add(next_tuple)
                 queue.append(next_pos)
-        
+
         return False
 
     def get_valid_moves(self, pos: Position) -> List[Position]:
@@ -425,52 +551,53 @@ class JunqiGame(BaseGame):
         piece = self.board[pos.y][pos.x]
         if not piece or not piece.is_alive or not piece.can_move():
             return []
-        
+
         valid_moves = []
-        
+
         for y in range(self.BOARD_HEIGHT):
             for x in range(self.BOARD_WIDTH):
                 to_pos = Position(x, y)
                 if self.is_valid_move(pos, to_pos):
                     valid_moves.append(to_pos)
-        
+
         return valid_moves
 
     def make_move(self, from_pos: Position, to_pos: Position) -> Tuple[bool, str]:
         """执行走棋"""
         if not self.is_valid_move(from_pos, to_pos):
             return False, "无效走棋"
-        
+
         piece = self.board[from_pos.y][from_pos.x]
         to_piece = self.board[to_pos.y][to_pos.x]
-        
+
         move_result = None
-        
+
         if to_piece and to_piece.is_alive:
             self.reveal_piece(from_pos.x, from_pos.y)
             self.reveal_piece(to_pos.x, to_pos.y)
-            
+
             result, message = self._combat(piece, to_piece)
             move_result = result
-            
+
             if result == "capture":
                 to_piece.is_alive = False
                 self.board[to_pos.y][to_pos.x] = piece
                 self.board[from_pos.y][from_pos.x] = None
                 piece.position = to_pos
-                
+
                 if to_piece.piece_type == PieceType.FLAG:
                     self.game_over = True
                     self.winner = piece.side
                     self.is_running = False
+                    self.phase = GamePhase.GAME_OVER
                     move_result = "flag_capture"
-            
+
             elif result == "both_die":
                 piece.is_alive = False
                 to_piece.is_alive = False
                 self.board[to_pos.y][to_pos.x] = None
                 self.board[from_pos.y][from_pos.x] = None
-            
+
             elif result == "die":
                 piece.is_alive = False
                 self.board[from_pos.y][from_pos.x] = None
@@ -478,36 +605,36 @@ class JunqiGame(BaseGame):
             self.board[to_pos.y][to_pos.x] = piece
             self.board[from_pos.y][from_pos.x] = None
             piece.position = to_pos
-        
+
         move = Move(from_pos, to_pos, piece, to_piece)
         move.result = move_result
         self.moves.append(move)
-        
+
         if self.current_player == PlayerSide.BLUE:
             self.last_ai_move = move
-        
+
         if not self.game_over:
             self.current_player = PlayerSide.BLUE if self.current_player == PlayerSide.RED else PlayerSide.RED
-        
+
         return True, move_result or "moved"
 
     def _combat(self, attacker: Piece, defender: Piece) -> Tuple[str, str]:
         """战斗结算"""
         if attacker.piece_type == PieceType.BOMB or defender.piece_type == PieceType.BOMB:
             return "both_die", "炸弹爆炸，同归于尽"
-        
+
         if defender.piece_type == PieceType.MINE:
             if attacker.piece_type == PieceType.ENGINEER:
                 return "capture", "工兵排雷成功"
             else:
                 return "both_die", "触碰地雷，同归于尽"
-        
+
         if defender.piece_type == PieceType.FLAG:
             return "capture", "军旗被夺，游戏结束"
-        
+
         attacker_rank = attacker.get_rank()
         defender_rank = defender.get_rank()
-        
+
         if attacker_rank > defender_rank:
             return "capture", f"{attacker.get_name()}吃掉{defender.get_name()}"
         elif attacker_rank == defender_rank:
@@ -517,20 +644,20 @@ class JunqiGame(BaseGame):
 
     def get_ai_move(self) -> Optional[Tuple[Position, Position]]:
         """获取AI走棋"""
-        if self.game_over:
+        if self.game_over or self.phase != GamePhase.PLAYING:
             return None
-        
+
         ai_pieces = [p for p in self.pieces[PlayerSide.BLUE] if p.is_alive and p.can_move()]
-        
+
         if not ai_pieces:
             return None
-        
+
         best_move = None
         best_score = -1
-        
+
         for piece in ai_pieces:
             valid_moves = self.get_valid_moves(piece.position)
-            
+
             for to_pos in valid_moves:
                 score = self._evaluate_move(piece, to_pos)
                 if score > best_score:
@@ -538,22 +665,22 @@ class JunqiGame(BaseGame):
                     best_move = (piece.position, to_pos)
                 elif score == best_score and random.random() > 0.5:
                     best_move = (piece.position, to_pos)
-        
+
         if best_move:
             return best_move
-        
+
         for piece in ai_pieces:
             valid_moves = self.get_valid_moves(piece.position)
             if valid_moves:
                 return (piece.position, random.choice(valid_moves))
-        
+
         return None
 
     def _evaluate_move(self, piece: Piece, to_pos: Position) -> int:
         """评估走棋分数"""
         score = 0
         to_piece = self.board[to_pos.y][to_pos.x]
-        
+
         if to_piece and to_piece.is_alive and to_piece.side == PlayerSide.RED:
             if to_piece.piece_type == PieceType.FLAG:
                 score += 100000
@@ -582,10 +709,10 @@ class JunqiGame(BaseGame):
                     score -= 100
             elif to_piece.piece_type == PieceType.BOMB:
                 score -= 50
-            
+
             attacker_rank = piece.get_rank()
             defender_rank = to_piece.get_rank()
-            
+
             if to_piece.piece_type not in [PieceType.MINE, PieceType.BOMB]:
                 if attacker_rank > defender_rank:
                     score += 50
@@ -596,13 +723,13 @@ class JunqiGame(BaseGame):
         else:
             if self.is_camp(to_pos):
                 score += 30
-            
+
             red_flag = [p for p in self.pieces[PlayerSide.RED] if p.piece_type == PieceType.FLAG and p.is_alive]
             if red_flag:
                 flag_pos = red_flag[0].position
                 distance = abs(to_pos.x - flag_pos.x) + abs(to_pos.y - flag_pos.y)
                 score += max(0, 50 - distance * 2)
-        
+
         return score
 
     def next_turn(self):
@@ -624,18 +751,18 @@ class JunqiGame(BaseGame):
                 "red": [],
                 "blue": []
             }
-            
+
             for piece in self.pieces[PlayerSide.RED]:
                 if piece.is_alive:
                     board_data["red"].append(piece.to_dict())
-            
+
             for piece in self.pieces[PlayerSide.BLUE]:
                 if piece.is_alive:
                     board_data["blue"].append(piece.to_dict())
-            
+
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(board_data, f, ensure_ascii=False, indent=2)
-            
+
             return True
         except Exception as e:
             print(f"保存棋盘失败: {e}")
@@ -646,13 +773,13 @@ class JunqiGame(BaseGame):
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 board_data = json.load(f)
-            
+
             self.board = [[None for _ in range(self.BOARD_WIDTH)] for _ in range(self.BOARD_HEIGHT)]
             self.pieces = {
                 PlayerSide.RED: [],
                 PlayerSide.BLUE: []
             }
-            
+
             for piece_data in board_data.get("red", []):
                 piece = Piece(
                     PieceType(piece_data["type"]),
@@ -662,7 +789,7 @@ class JunqiGame(BaseGame):
                 piece.is_alive = piece_data.get("is_alive", True)
                 self.board[piece.position.y][piece.position.x] = piece
                 self.pieces[PlayerSide.RED].append(piece)
-            
+
             for piece_data in board_data.get("blue", []):
                 piece = Piece(
                     PieceType(piece_data["type"]),
@@ -672,7 +799,7 @@ class JunqiGame(BaseGame):
                 piece.is_alive = piece_data.get("is_alive", True)
                 self.board[piece.position.y][piece.position.x] = piece
                 self.pieces[PlayerSide.BLUE].append(piece)
-            
+
             return True
         except Exception as e:
             print(f"加载棋盘失败: {e}")
@@ -687,7 +814,8 @@ class JunqiGame(BaseGame):
             "current_player": self.current_player.name if self.current_player else None,
             "game_over": self.game_over,
             "winner": self.winner.name if self.winner else None,
-            "moves_count": len(self.moves)
+            "moves_count": len(self.moves),
+            "phase": self.phase.name
         })
         return state
 
