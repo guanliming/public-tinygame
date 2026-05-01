@@ -5760,7 +5760,7 @@ class JunqiGameUI:
                 
                 is_camp = self.game.is_camp(pos)
                 
-                cell_bgcolor = ft.Colors.BEIGE_200
+                cell_bgcolor = ft.Colors.BROWN_100
                 
                 border = ft.Border(
                     top=ft.BorderSide(1, ft.Colors.BROWN_500),
