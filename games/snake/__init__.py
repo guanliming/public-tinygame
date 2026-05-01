@@ -3,7 +3,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from games.snake.game import SnakeGame, Direction, Position
+from games.snake.ui import SnakeGameUI
 
 __all__ = [
-    'SnakeGame', 'Direction', 'Position'
+    'SnakeGame', 'Direction', 'Position',
+    'SnakeGameUI'
 ]
