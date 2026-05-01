@@ -869,15 +869,15 @@ def main():
     local_ip = socket.gethostbyname(hostname)
 
     print(f"\nGame interface access URLs:")
-    print(f"  - Local: http://localhost:8000")
-    print(f"  - Network: http://{local_ip}:8000")
+    print(f"  - Local: http://localhost:8001")
+    print(f"  - Network: http://{local_ip}:8001")
     print(f"\nGame will open in browser.")
     print(f"If browser doesn't open automatically, please visit the URL above.")
     print("=" * 50)
 
     try:
         game_selector = GameSelector()
-        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8080)
+        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8001)
     except Exception as e:
         print(f"\nError: {e}")
         print("\n可能的解决方案:")
