@@ -302,12 +302,26 @@ class TetrisGameUI:
     
     def _show_welcome_screen(self):
         """显示欢迎界面"""
+        print("[DEBUG Tetris] _show_welcome_screen called")
+        print(f"[DEBUG Tetris] self.page is None: {self.page is None}")
+        print(f"[DEBUG Tetris] welcome_screen visible before: {self.welcome_screen.visible if self.welcome_screen else 'None'}")
+        print(f"[DEBUG Tetris] game_screen visible before: {self.game_screen.visible if self.game_screen else 'None'}")
+        print(f"[DEBUG Tetris] game_over_screen visible before: {self.game_over_screen.visible if self.game_over_screen else 'None'}")
+        
         self.welcome_screen.visible = True
         self.game_screen.visible = False
         self.game_over_screen.visible = False
         
+        print(f"[DEBUG Tetris] welcome_screen visible after: {self.welcome_screen.visible}")
+        print(f"[DEBUG Tetris] game_screen visible after: {self.game_screen.visible}")
+        print(f"[DEBUG Tetris] game_over_screen visible after: {self.game_over_screen.visible}")
+        
         if self.page:
+            print("[DEBUG Tetris] Calling page.update()...")
             self.page.update()
+            print("[DEBUG Tetris] page.update() completed")
+        else:
+            print("[DEBUG Tetris] self.page is None, cannot update")
     
     def _show_game_screen(self):
         """显示游戏界面"""

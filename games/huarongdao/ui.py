@@ -28,6 +28,7 @@ class HuarongdaoGameUI:
         self.welcome_screen: Optional[ft.Container] = None
         self.game_screen: Optional[ft.Container] = None
         self.game_over_screen: Optional[ft.Container] = None
+        self.main_stack: Optional[ft.Stack] = None
         
         self.start_button: Optional[ft.Button] = None
         self.restart_button: Optional[ft.Button] = None
@@ -258,7 +259,7 @@ class HuarongdaoGameUI:
             visible=False
         )
         
-        return ft.Stack(
+        self.main_stack = ft.Stack(
             [
                 self.welcome_screen,
                 self.game_screen,
@@ -266,15 +267,30 @@ class HuarongdaoGameUI:
             ],
             expand=True
         )
+        return self.main_stack
     
     def _show_welcome_screen(self):
         """显示欢迎界面"""
+        print("[DEBUG Huarongdao] _show_welcome_screen called")
+        print(f"[DEBUG Huarongdao] self.page is None: {self.page is None}")
+        print(f"[DEBUG Huarongdao] welcome_screen visible before: {self.welcome_screen.visible if self.welcome_screen else 'None'}")
+        print(f"[DEBUG Huarongdao] game_screen visible before: {self.game_screen.visible if self.game_screen else 'None'}")
+        print(f"[DEBUG Huarongdao] game_over_screen visible before: {self.game_over_screen.visible if self.game_over_screen else 'None'}")
+        
         self.welcome_screen.visible = True
         self.game_screen.visible = False
         self.game_over_screen.visible = False
         
+        print(f"[DEBUG Huarongdao] welcome_screen visible after: {self.welcome_screen.visible}")
+        print(f"[DEBUG Huarongdao] game_screen visible after: {self.game_screen.visible}")
+        print(f"[DEBUG Huarongdao] game_over_screen visible after: {self.game_over_screen.visible}")
+        
         if self.page:
+            print("[DEBUG Huarongdao] Calling page.update()...")
             self.page.update()
+            print("[DEBUG Huarongdao] page.update() completed")
+        else:
+            print("[DEBUG Huarongdao] self.page is None, cannot update")
     
     def _show_game_screen(self):
         """显示游戏界面"""

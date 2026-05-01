@@ -32,7 +32,7 @@ class WhackAMoleGameUI:
         self.exit_button: Optional[ft.Button] = None
         self.game_exit_button: Optional[ft.Button] = None
         
-        self.hole_buttons: List[ft.ElevatedButton] = []
+        self.hole_buttons: List[ft.Button] = []
     
     def build(self, page: ft.Page):
         """构建并返回UI控件"""
@@ -224,12 +224,26 @@ class WhackAMoleGameUI:
     
     def _show_welcome_screen(self):
         """显示欢迎界面"""
+        print("[DEBUG WhackAMole] _show_welcome_screen called")
+        print(f"[DEBUG WhackAMole] self.page is None: {self.page is None}")
+        print(f"[DEBUG WhackAMole] welcome_screen visible before: {self.welcome_screen.visible if self.welcome_screen else 'None'}")
+        print(f"[DEBUG WhackAMole] game_screen visible before: {self.game_screen.visible if self.game_screen else 'None'}")
+        print(f"[DEBUG WhackAMole] game_over_screen visible before: {self.game_over_screen.visible if self.game_over_screen else 'None'}")
+        
         self.welcome_screen.visible = True
         self.game_screen.visible = False
         self.game_over_screen.visible = False
         
+        print(f"[DEBUG WhackAMole] welcome_screen visible after: {self.welcome_screen.visible}")
+        print(f"[DEBUG WhackAMole] game_screen visible after: {self.game_screen.visible}")
+        print(f"[DEBUG WhackAMole] game_over_screen visible after: {self.game_over_screen.visible}")
+        
         if self.page:
+            print("[DEBUG WhackAMole] Calling page.update()...")
             self.page.update()
+            print("[DEBUG WhackAMole] page.update() completed")
+        else:
+            print("[DEBUG WhackAMole] self.page is None, cannot update")
     
     def _show_game_screen(self):
         """显示游戏界面"""
@@ -326,10 +340,10 @@ class WhackAMoleGameUI:
         
         self.game_grid.update()
     
-    def _create_hole_button(self, index: int) -> ft.ElevatedButton:
+    def _create_hole_button(self, index: int) -> ft.Button:
         """创建地洞按钮"""
-        btn = ft.ElevatedButton(
-            text="",
+        btn = ft.Button(
+            "",
             width=65,
             height=65,
             style=ft.ButtonStyle(

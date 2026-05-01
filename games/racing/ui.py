@@ -167,11 +167,23 @@ class RacingGameUI:
     
     def _show_welcome_screen(self):
         """显示欢迎界面"""
+        print("[DEBUG Racing] _show_welcome_screen called")
+        print(f"[DEBUG Racing] self.page is None: {self.page is None}")
+        print(f"[DEBUG Racing] welcome_screen visible before: {self.welcome_screen.visible if self.welcome_screen else 'None'}")
+        print(f"[DEBUG Racing] game_screen visible before: {self.game_screen.visible if self.game_screen else 'None'}")
+        
         self.welcome_screen.visible = True
         self.game_screen.visible = False
         
+        print(f"[DEBUG Racing] welcome_screen visible after: {self.welcome_screen.visible}")
+        print(f"[DEBUG Racing] game_screen visible after: {self.game_screen.visible}")
+        
         if self.page:
+            print("[DEBUG Racing] Calling page.update()...")
             self.page.update()
+            print("[DEBUG Racing] page.update() completed")
+        else:
+            print("[DEBUG Racing] self.page is None, cannot update")
     
     def _show_game_screen(self):
         """显示游戏界面"""
