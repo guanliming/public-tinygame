@@ -183,45 +183,62 @@ class JunqiGame(BaseGame):
             base_y = 0
             flag_x = 5
             mine_positions = [(4, 0), (6, 0), (5, 1)]
+            bomb_positions = [(3, 0), (8, 0)]
+            engineer_positions = [(1, 2), (5, 2), (10, 2)]
+            platoon_positions = [(2, 2), (4, 2), (9, 2)]
+            company_positions = [(3, 1), (7, 1), (6, 2)]
+            battalion_positions = [(0, 3), (11, 3)]
+            regiment_positions = [(2, 1), (8, 1)]
+            brigade_positions = [(1, 1), (9, 1)]
+            division_positions = [(0, 1), (10, 1)]
+            corps_position = (1, 0)
+            commander_position = (10, 0)
         else:
             base_y = 9
             flag_x = 6
-            mine_positions = [(5, 9), (7, 9), (6, 8)]
+            mine_positions = [(7, 9), (5, 9), (6, 8)]
+            bomb_positions = [(8, 9), (3, 9)]
+            engineer_positions = [(10, 7), (6, 7), (1, 7)]
+            platoon_positions = [(9, 7), (7, 7), (2, 7)]
+            company_positions = [(8, 8), (4, 8), (5, 7)]
+            battalion_positions = [(11, 6), (0, 6)]
+            regiment_positions = [(9, 8), (3, 8)]
+            brigade_positions = [(10, 8), (2, 8)]
+            division_positions = [(11, 8), (1, 8)]
+            corps_position = (10, 9)
+            commander_position = (1, 9)
         
         pieces.append(Piece(PieceType.FLAG, side, Position(flag_x, base_y)))
         
         for x, y in mine_positions:
             pieces.append(Piece(PieceType.MINE, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.BOMB, side, Position(3, base_y)))
-        pieces.append(Piece(PieceType.BOMB, side, Position(8, base_y)))
+        for x, y in bomb_positions:
+            pieces.append(Piece(PieceType.BOMB, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(1, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(5, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(10, 2 if side == PlayerSide.RED else 7)))
+        for x, y in engineer_positions:
+            pieces.append(Piece(PieceType.ENGINEER, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.PLATOON, side, Position(2, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.PLATOON, side, Position(4, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.PLATOON, side, Position(9, 2 if side == PlayerSide.RED else 7)))
+        for x, y in platoon_positions:
+            pieces.append(Piece(PieceType.PLATOON, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.COMPANY, side, Position(3, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.COMPANY, side, Position(7, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.COMPANY, side, Position(6, 2 if side == PlayerSide.RED else 7)))
+        for x, y in company_positions:
+            pieces.append(Piece(PieceType.COMPANY, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.BATTALION, side, Position(0, 3 if side == PlayerSide.RED else 6)))
-        pieces.append(Piece(PieceType.BATTALION, side, Position(11, 3 if side == PlayerSide.RED else 6)))
+        for x, y in battalion_positions:
+            pieces.append(Piece(PieceType.BATTALION, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.REGIMENT, side, Position(2, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.REGIMENT, side, Position(8, 1 if side == PlayerSide.RED else 8)))
+        for x, y in regiment_positions:
+            pieces.append(Piece(PieceType.REGIMENT, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.BRIGADE, side, Position(1, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.BRIGADE, side, Position(9, 1 if side == PlayerSide.RED else 8)))
+        for x, y in brigade_positions:
+            pieces.append(Piece(PieceType.BRIGADE, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.DIVISION, side, Position(0, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.DIVISION, side, Position(10, 1 if side == PlayerSide.RED else 8)))
+        for x, y in division_positions:
+            pieces.append(Piece(PieceType.DIVISION, side, Position(x, y)))
         
-        pieces.append(Piece(PieceType.CORPS, side, Position(1, 0 if side == PlayerSide.RED else 9)))
-        pieces.append(Piece(PieceType.COMMANDER, side, Position(10, 0 if side == PlayerSide.RED else 9)))
+        pieces.append(Piece(PieceType.CORPS, side, Position(corps_position[0], corps_position[1])))
+        pieces.append(Piece(PieceType.COMMANDER, side, Position(commander_position[0], commander_position[1])))
         
         return pieces
 
