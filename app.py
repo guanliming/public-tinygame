@@ -18,6 +18,552 @@ from games.tetris import TetrisGame
 from games.sudoku import SudokuGame as SudokuGameCore, CellState as SudokuCellState
 from games.junqi import JunqiGame, PlayerSide, PieceType, Position, Piece, Move
 from games.huarongdao import HuarongdaoGame
+from games.racing import RacingGame, Obstacle, RoadLine, DifficultyLevel, DIFFICULTY_CONFIGS
+from games.lianliankan import LianliankanGame, CardState, FruitType
+
+
+class LianliankanGameUI:
+    """连连看游戏界面"""
+    
+    CELL_SIZE = 180
+    BOARD_PADDING = 40
+    
+    FRUIT_EMOJIS = {
+        FruitType.APPLE: "🍎",
+        FruitType.BANANA: "🍌",
+        FruitType.ORANGE: "🍊",
+        FruitType.GRAPE: "🍇",
+        FruitType.STRAWBERRY: "🍓",
+        FruitType.WATERMELON: "🍉",
+        FruitType.PEACH: "🍑",
+        FruitType.CHERRY: "🍒",
+        FruitType.MANGO: "🥭",
+        FruitType.PINEAPPLE: "🍍",
+        FruitType.KIWI: "🥝",
+        FruitType.LEMON: "🍋",
+        FruitType.COCONUT: "🥥",
+        FruitType.PEAR: "🍐",
+        FruitType.PLUM: "🟣"
+    }
+    
+    SNAIL_BACKGROUND = "🐌"
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[LianliankanGame] = None
+        self.page: Optional[ft.Page] = None
+        self.game_task: Optional[asyncio.Task] = None
+        self.on_exit = on_exit
+        
+        self.card_containers: List[List[Optional[ft.Container]]] = []
+        self.time_text: Optional[ft.Text] = None
+        self.progress_text: Optional[ft.Text] = None
+        self.game_over_message: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.start_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+    
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.time_text = ft.Text(
+            "时间: 30秒",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.progress_text = ft.Text(
+            "进度: 0 / 30",
+            size=24,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_message = ft.Text(
+            "",
+            size=26,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.start_button = ft.Button(
+            "开始游戏",
+            on_click=self._start_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.PINK_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.PINK_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "🍇 连连看",
+                        size=48,
+                        color=ft.Colors.PINK_400,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "棋盘大小: 5 行 × 6 列",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "15 种水果，每种 2 张",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "点击卡片翻开，相同则消除",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "不同则 1 秒后翻回",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "倒计时 30 秒，全部消除获胜",
+                        size=18,
+                        color=ft.Colors.WHITE
+                    ),
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.start_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.time_text, ft.Container(expand=True), self.progress_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Container(
+                        content=ft.Stack([]),
+                        expand=True,
+                        alignment=ft.Alignment(0, 0)
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_message,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _build_card(self, row: int, col: int) -> ft.Container:
+        """构建单个卡片"""
+        card = ft.Container(
+            width=self.CELL_SIZE - 6,
+            height=self.CELL_SIZE - 6,
+            bgcolor=ft.Colors.PINK_100,
+            border_radius=15,
+            border=ft.Border.all(3, ft.Colors.PINK_400),
+            alignment=ft.Alignment(0, 0),
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=5,
+                color=ft.Colors.BLACK54,
+                offset=ft.Offset(2, 2)
+            ),
+            animate=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+            data={"row": row, "col": col}
+        )
+        
+        card.content = ft.Text(
+            self.SNAIL_BACKGROUND,
+            size=int(self.CELL_SIZE * 0.5),
+            color=ft.Colors.BROWN_600,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        return card
+    
+    def _build_game_board(self):
+        """构建游戏棋盘"""
+        if not self.game or not self.game_screen:
+            return
+        
+        board_container = self.game_screen.content.controls[2]
+        board_stack = board_container.content
+        board_stack.controls.clear()
+        
+        rows = self.game.ROWS
+        cols = self.game.COLS
+        
+        board_width = cols * self.CELL_SIZE + self.BOARD_PADDING * 2
+        board_height = rows * self.CELL_SIZE + self.BOARD_PADDING * 2
+        
+        board_bg = ft.Container(
+            width=board_width,
+            height=board_height,
+            bgcolor=ft.Colors.PINK_50,
+            border=ft.Border.all(5, ft.Colors.PINK_300),
+            border_radius=15,
+            shadow=ft.BoxShadow(
+                spread_radius=5,
+                blur_radius=20,
+                color=ft.Colors.BLACK54,
+                offset=ft.Offset(0, 10)
+            )
+        )
+        board_stack.controls.append(board_bg)
+        
+        self.card_containers = [[None for _ in range(cols)] for _ in range(rows)]
+        
+        for row in range(rows):
+            for col in range(cols):
+                cell_left = self.BOARD_PADDING + col * self.CELL_SIZE + 3
+                cell_top = self.BOARD_PADDING + row * self.CELL_SIZE + 3
+                
+                card = self._build_card(row, col)
+                
+                gesture = ft.GestureDetector(
+                    content=card,
+                    on_tap=lambda e, r=row, c=col: self._on_card_click(r, c),
+                    data={"row": row, "col": col}
+                )
+                
+                card_wrapper = ft.Container(
+                    content=gesture,
+                    left=cell_left,
+                    top=cell_top
+                )
+                
+                self.card_containers[row][col] = card
+                board_stack.controls.append(card_wrapper)
+        
+        board_container.update()
+    
+    def _update_card_display(self, row: int, col: int):
+        """更新卡片显示"""
+        if not self.card_containers or not self.card_containers[row][col]:
+            return
+        
+        card = self.card_containers[row][col]
+        fruit = self.game.get_fruit(row, col)
+        is_matched = self.game.is_matched(row, col)
+        is_revealed = self.game.is_revealed(row, col)
+        
+        if is_matched:
+            card.bgcolor = ft.Colors.GREEN_200
+            card.border = ft.Border.all(3, ft.Colors.GREEN_500)
+            card.opacity = 0.3
+            if fruit:
+                card.content = ft.Text(
+                    self.FRUIT_EMOJIS.get(fruit, "❓"),
+                    size=int(self.CELL_SIZE * 0.5),
+                    color=ft.Colors.WHITE,
+                    weight=ft.FontWeight.BOLD
+                )
+        elif is_revealed:
+            card.bgcolor = ft.Colors.WHITE
+            card.border = ft.Border.all(3, ft.Colors.YELLOW_500)
+            card.opacity = 1.0
+            if fruit:
+                card.content = ft.Text(
+                    self.FRUIT_EMOJIS.get(fruit, "❓"),
+                    size=int(self.CELL_SIZE * 0.5),
+                    color=ft.Colors.BLACK,
+                    weight=ft.FontWeight.BOLD
+                )
+        else:
+            card.bgcolor = ft.Colors.PINK_100
+            card.border = ft.Border.all(3, ft.Colors.PINK_400)
+            card.opacity = 1.0
+            card.content = ft.Text(
+                self.SNAIL_BACKGROUND,
+                size=int(self.CELL_SIZE * 0.5),
+                color=ft.Colors.BROWN_600,
+                weight=ft.FontWeight.BOLD
+            )
+        
+        card.update()
+    
+    def _update_all_cards(self):
+        """更新所有卡片显示"""
+        if not self.game:
+            return
+        
+        for row in range(self.game.ROWS):
+            for col in range(self.game.COLS):
+                self._update_card_display(row, col)
+    
+    async def _flip_back_delayed(self, card1_row: int, card1_col: int, card2_row: int, card2_col: int):
+        """延迟翻回卡片"""
+        await asyncio.sleep(1)
+        
+        if self.game:
+            self.game.flip_back_cards()
+            self._update_card_display(card1_row, card1_col)
+            self._update_card_display(card2_row, card2_col)
+    
+    def _on_card_click(self, row: int, col: int):
+        """卡片点击事件"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        if self.game.waiting_for_flip_back:
+            return
+        
+        need_flip_back, card1, card2 = self.game.flip_card(row, col)
+        
+        self._update_card_display(row, col)
+        
+        if card1 and card2:
+            self._update_progress()
+            
+            if need_flip_back:
+                if self.page:
+                    self.page.run_task(
+                        self._flip_back_delayed,
+                        card1.row, card1.col, card2.row, card2.col
+                    )
+            else:
+                self._update_card_display(card1.row, card1.col)
+                self._update_card_display(card2.row, card2.col)
+                
+                if self.game.won:
+                    if self.game_task and not self.game_task.done():
+                        self.game_task.cancel()
+                    self._show_game_over_screen(won=True)
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "🎉 恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_message.value = f"太棒了！你在 {self.game.get_remaining_time_display()} 秒内完成了所有配对！"
+        else:
+            self.game_over_screen.content.controls[0].value = "⏰ 时间到！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.RED
+            self.game_over_message.value = f"完成进度: {self.game.matched_count} / {self.game.TOTAL_CARDS}"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _start_game(self, e):
+        """开始游戏"""
+        self.game = LianliankanGame()
+        self.game.init_game()
+        self.game.start()
+        
+        self._build_game_board()
+        self._update_time()
+        self._update_progress()
+        
+        self._show_game_screen()
+        
+        if self.page:
+            self.game_task = self.page.run_task(self._game_loop)
+    
+    def _update_time(self):
+        """更新时间显示"""
+        if self.game and self.time_text:
+            self.game.update_time()
+            remaining = int(self.game.remaining_time)
+            
+            self.time_text.value = f"时间: {remaining}秒"
+            
+            if remaining <= 10:
+                self.time_text.color = ft.Colors.RED
+            else:
+                self.time_text.color = ft.Colors.WHITE
+            
+            self.time_text.update()
+    
+    def _update_progress(self):
+        """更新进度显示"""
+        if self.game and self.progress_text:
+            self.progress_text.value = f"进度: {self.game.matched_count} / {self.game.TOTAL_CARDS}"
+            self.progress_text.update()
+    
+    async def _game_loop(self):
+        """游戏主循环"""
+        if not self.game:
+            return
+        
+        while self.game.is_running:
+            self._update_time()
+            
+            if self.game.game_over:
+                if self.game_task and not self.game_task.done():
+                    self.game_task.cancel()
+                self._show_game_over_screen(won=False)
+                break
+            
+            await asyncio.sleep(0.1)
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
 
 
 class HuarongdaoGameUI:
@@ -51,6 +597,8 @@ class HuarongdaoGameUI:
         self.dragging_cell: Optional[Tuple[int, int]] = None
         self.drag_start_global_x: float = 0
         self.drag_start_global_y: float = 0
+        self.drag_accumulated_x: float = 0
+        self.drag_accumulated_y: float = 0
         self.original_left: float = 0
         self.original_top: float = 0
     
@@ -414,7 +962,7 @@ class HuarongdaoGameUI:
                 
                 gesture = ft.GestureDetector(
                     content=cell,
-                    on_tap=lambda e, row=i, col=j: self._on_cell_click(row, col),
+                    on_tap=lambda e, row=i, col=j: self._on_cell_click(e, row, col),
                     on_pan_start=lambda e, row=i, col=j: self._on_pan_start(e, row, col),
                     on_pan_update=lambda e: self._on_pan_update(e),
                     on_pan_end=lambda e: self._on_pan_end(e),
@@ -432,34 +980,76 @@ class HuarongdaoGameUI:
         
         board_container.update()
     
-    def _on_cell_click(self, row: int, col: int):
+    def _on_cell_click(self, e, row: int, col: int):
         """格子点击事件"""
         if not self.game or not self.game.is_running:
             return
         
-        if self.game.move(row, col):
-            self._update_board_display()
-            self._update_moves_display()
+        try:
+            if hasattr(e, 'control') and hasattr(e.control, 'data') and e.control.data:
+                row = e.control.data.get('row', row)
+                col = e.control.data.get('col', col)
+        except (AttributeError, TypeError):
+            pass
+        
+        if not self.game.can_move(row, col):
+            return
+        
+        empty_pos = self.game._get_adjacent_empty_pos(row, col)
+        if empty_pos is None:
+            return
+        
+        empty_row, empty_col = empty_pos
+        
+        self.game.move(row, col)
+        
+        wrapper = self.cell_containers[row][col]
+        if wrapper:
+            cell_size = self._calculate_cell_size()
+            new_left = self.BOARD_PADDING + empty_col * cell_size + 2
+            new_top = self.BOARD_PADDING + empty_row * cell_size + 2
             
-            if self.game.won:
-                if self.game_task and not self.game_task.done():
-                    self.game_task.cancel()
-                self._show_game_over_screen(won=True)
+            wrapper.left = new_left
+            wrapper.top = new_top
+            
+            try:
+                if hasattr(wrapper, 'content') and hasattr(wrapper.content, 'data'):
+                    wrapper.content.data = {'row': empty_row, 'col': empty_col}
+            except (AttributeError, TypeError):
+                pass
+            
+            wrapper.update()
+            
+            self.cell_containers[empty_row][empty_col] = wrapper
+            self.cell_containers[row][col] = None
+        
+        self._update_moves_display()
+        
+        if self.game.won:
+            if self.game_task and not self.game_task.done():
+                self.game_task.cancel()
+            self._show_game_over_screen(won=True)
     
     def _on_pan_start(self, e, row: int, col: int):
         """拖动开始"""
         if not self.game or not self.game.is_running:
             return
         
+        try:
+            if hasattr(e, 'control'):
+                if hasattr(e.control, 'data') and e.control.data:
+                    if isinstance(e.control.data, dict):
+                        row = e.control.data.get('row', row)
+                        col = e.control.data.get('col', col)
+        except (AttributeError, TypeError):
+            pass
+        
         if not self.game.can_move(row, col):
             return
         
         self.dragging_cell = (row, col)
-        try:
-            self.drag_start_global_x = e.global_x
-            self.drag_start_global_y = e.global_y
-        except AttributeError:
-            pass
+        self.drag_accumulated_x = 0
+        self.drag_accumulated_y = 0
         
         wrapper = self.cell_containers[row][col]
         if wrapper:
@@ -475,38 +1065,60 @@ class HuarongdaoGameUI:
         wrapper = self.cell_containers[row][col]
         
         if wrapper:
-            empty_row, empty_col = self.game.empty_pos
+            empty_pos = self.game._get_adjacent_empty_pos(row, col)
+            if empty_pos is None:
+                return
+            
+            empty_row, empty_col = empty_pos
             cell_size = self._calculate_cell_size()
             
             try:
-                delta_x = e.global_x - self.drag_start_global_x
-                delta_y = e.global_y - self.drag_start_global_y
-            except AttributeError:
+                if hasattr(e, 'local_delta') and e.local_delta is not None:
+                    delta_x = e.local_delta.x
+                    delta_y = e.local_delta.y
+                    self.drag_accumulated_x += delta_x
+                    self.drag_accumulated_y += delta_y
+                elif hasattr(e, 'delta_x'):
+                    delta_x = e.delta_x
+                    delta_y = e.delta_y
+                    self.drag_accumulated_x += delta_x
+                    self.drag_accumulated_y += delta_y
+                elif hasattr(e, 'global_x'):
+                    current_x = e.global_x
+                    current_y = e.global_y
+                    if self.drag_accumulated_x == 0 and self.drag_accumulated_y == 0:
+                        self.drag_start_global_x = current_x
+                        self.drag_start_global_y = current_y
+                    self.drag_accumulated_x = current_x - self.drag_start_global_x
+                    self.drag_accumulated_y = current_y - self.drag_start_global_y
+                else:
+                    return
+            except (AttributeError, TypeError):
                 return
             
             is_horizontal = row == empty_row
             is_vertical = col == empty_col
             
             if is_horizontal:
-                target_col = empty_col
-                direction = 1 if target_col > col else -1
-                max_move = cell_size * abs(target_col - col)
+                max_move = cell_size * abs(empty_col - col)
                 
-                if direction > 0:
-                    new_left = min(self.original_left + delta_x, self.original_left + max_move)
+                if empty_col > col:
+                    new_left = max(self.original_left + self.drag_accumulated_x, self.original_left - max_move)
+                    new_left = min(new_left, self.original_left + max_move)
                 else:
-                    new_left = max(self.original_left + delta_x, self.original_left - max_move)
+                    new_left = max(self.original_left + self.drag_accumulated_x, self.original_left - max_move)
+                    new_left = min(new_left, self.original_left + max_move)
                 
                 wrapper.left = new_left
             elif is_vertical:
-                target_row = empty_row
-                direction = 1 if target_row > row else -1
-                max_move = cell_size * abs(target_row - row)
+                max_move = cell_size * abs(empty_row - row)
                 
-                if direction > 0:
-                    new_top = min(self.original_top + delta_y, self.original_top + max_move)
+                if empty_row > row:
+                    new_top = max(self.original_top + self.drag_accumulated_y, self.original_top - max_move)
+                    new_top = min(new_top, self.original_top + max_move)
                 else:
-                    new_top = max(self.original_top + delta_y, self.original_top - max_move)
+                    new_top = max(self.original_top + self.drag_accumulated_y, self.original_top - max_move)
+                    new_top = min(new_top, self.original_top + max_move)
                 
                 wrapper.top = new_top
             
@@ -522,19 +1134,62 @@ class HuarongdaoGameUI:
         
         if wrapper:
             cell_size = self._calculate_cell_size()
-            moved_distance = 0
             
-            empty_row, empty_col = self.game.empty_pos
+            empty_pos = self.game._get_adjacent_empty_pos(row, col)
+            if empty_pos is None:
+                wrapper.left = self.original_left
+                wrapper.top = self.original_top
+                wrapper.update()
+                self.dragging_cell = None
+                return
+            
+            empty_row, empty_col = empty_pos
             is_horizontal = row == empty_row
             is_vertical = col == empty_col
             
-            if is_horizontal:
-                moved_distance = abs(wrapper.left - self.original_left)
-            elif is_vertical:
-                moved_distance = abs(wrapper.top - self.original_top)
+            should_move = False
             
-            if moved_distance > cell_size * 0.5:
-                self._on_cell_click(row, col)
+            if is_horizontal:
+                if empty_col > col:
+                    if self.drag_accumulated_x > cell_size * 0.5:
+                        should_move = True
+                else:
+                    if self.drag_accumulated_x < -cell_size * 0.5:
+                        should_move = True
+            elif is_vertical:
+                if empty_row > row:
+                    if self.drag_accumulated_y > cell_size * 0.5:
+                        should_move = True
+                else:
+                    if self.drag_accumulated_y < -cell_size * 0.5:
+                        should_move = True
+            
+            if should_move:
+                self.game.move(row, col)
+                
+                new_left = self.BOARD_PADDING + empty_col * cell_size + 2
+                new_top = self.BOARD_PADDING + empty_row * cell_size + 2
+                
+                wrapper.left = new_left
+                wrapper.top = new_top
+                
+                try:
+                    if hasattr(wrapper, 'content') and hasattr(wrapper.content, 'data'):
+                        wrapper.content.data = {'row': empty_row, 'col': empty_col}
+                except (AttributeError, TypeError):
+                    pass
+                
+                wrapper.update()
+                
+                self.cell_containers[empty_row][empty_col] = wrapper
+                self.cell_containers[row][col] = None
+                
+                self._update_moves_display()
+                
+                if self.game.won:
+                    if self.game_task and not self.game_task.done():
+                        self.game_task.cancel()
+                    self._show_game_over_screen(won=True)
             else:
                 wrapper.left = self.original_left
                 wrapper.top = self.original_top
@@ -4880,9 +5535,14 @@ class JunqiGameUI:
                     ),
                     ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
                     ft.Text(
-                        "棋盘大小: 12 × 10",
+                        "棋盘大小: 12 × 12 (每方6×6区域)",
                         size=18,
                         color=ft.Colors.WHITE
+                    ),
+                    ft.Text(
+                        "暗棋模式: 对方棋子不可见，战斗后揭示",
+                        size=16,
+                        color=ft.Colors.GREY_400
                     ),
                     ft.Text(
                         "玩家: 红方（先手）",
@@ -5158,14 +5818,24 @@ class JunqiGameUI:
             except:
                 pass
         
-        if piece.side == PlayerSide.RED:
-            bg_color = ft.Colors.RED_100
-            border_color = ft.Colors.RED_700
-            text_color = ft.Colors.RED_900
+        is_visible = self.game.is_piece_visible(piece, PlayerSide.RED)
+        
+        if is_visible:
+            if piece.side == PlayerSide.RED:
+                bg_color = ft.Colors.RED_100
+                border_color = ft.Colors.RED_700
+                text_color = ft.Colors.RED_900
+                display_text = piece.get_name()
+            else:
+                bg_color = ft.Colors.BLUE_100
+                border_color = ft.Colors.BLUE_700
+                text_color = ft.Colors.BLUE_900
+                display_text = piece.get_name()
         else:
-            bg_color = ft.Colors.BLUE_100
-            border_color = ft.Colors.BLUE_700
-            text_color = ft.Colors.BLUE_900
+            bg_color = ft.Colors.GREY_500
+            border_color = ft.Colors.GREY_700
+            text_color = ft.Colors.WHITE
+            display_text = "?"
         
         piece_left = self.BOARD_PADDING + x * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
         piece_top = self.BOARD_PADDING + y * self.CELL_SIZE + (self.CELL_SIZE - self.PIECE_SIZE) // 2
@@ -5183,7 +5853,7 @@ class JunqiGameUI:
             left=piece_left,
             top=piece_top,
             content=ft.Text(
-                piece.get_name(),
+                display_text,
                 size=11,
                 color=text_color,
                 weight=ft.FontWeight.BOLD
@@ -5460,6 +6130,626 @@ class JunqiGameUI:
         self._exit_to_selector(e)
 
 
+class RacingGameUI:
+    """赛车游戏界面"""
+    
+    GAME_WIDTH = 300
+    GAME_HEIGHT = 600
+    PLAYER_WIDTH = 40
+    PLAYER_HEIGHT = 60
+    LANE_WIDTH = GAME_WIDTH // RacingGame.LANE_COUNT
+    
+    def __init__(self, on_exit=None):
+        self.game: Optional[RacingGame] = None
+        self.page: Optional[ft.Page] = None
+        self.game_task: Optional[asyncio.Task] = None
+        self.on_exit = on_exit
+        self.selected_difficulty: DifficultyLevel = DifficultyLevel.HARD
+        
+        self.game_container: Optional[ft.Container] = None
+        self.speed_text: Optional[ft.Text] = None
+        self.time_text: Optional[ft.Text] = None
+        self.difficulty_text: Optional[ft.Text] = None
+        self.game_over_message: Optional[ft.Text] = None
+        
+        self.welcome_screen: Optional[ft.Container] = None
+        self.game_screen: Optional[ft.Container] = None
+        self.game_over_screen: Optional[ft.Container] = None
+        
+        self.medium_button: Optional[ft.Button] = None
+        self.hard_button: Optional[ft.Button] = None
+        self.restart_button: Optional[ft.Button] = None
+        self.back_button: Optional[ft.Button] = None
+        self.exit_button: Optional[ft.Button] = None
+        self.game_exit_button: Optional[ft.Button] = None
+        
+        self.keys_pressed = set()
+        self.last_update_time = 0
+        
+    def build(self, page: ft.Page):
+        """构建并返回UI控件"""
+        self.page = page
+        page.on_keyboard_event = self._on_keyboard_event
+        return self._build_ui()
+    
+    def show(self):
+        """显示初始界面"""
+        self._show_welcome_screen()
+    
+    def _build_ui(self):
+        """构建UI"""
+        self.speed_text = ft.Text(
+            "车速: 0 km/h",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.time_text = ft.Text(
+            "时间: 0.0 / 30.0 秒",
+            size=20,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.difficulty_text = ft.Text(
+            "难度: 最高难度",
+            size=18,
+            color=ft.Colors.ORANGE_400,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.game_over_message = ft.Text(
+            "",
+            size=26,
+            color=ft.Colors.WHITE,
+            weight=ft.FontWeight.BOLD
+        )
+        
+        self.medium_button = ft.Button(
+            "中等难度",
+            on_click=lambda e: self._select_difficulty(DifficultyLevel.MEDIUM),
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREEN_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.hard_button = ft.Button(
+            "最高难度",
+            on_click=lambda e: self._select_difficulty(DifficultyLevel.HARD),
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.restart_button = ft.Button(
+            "再玩一次",
+            on_click=self._restart_game,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BLUE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.back_button = ft.Button(
+            "返回",
+            on_click=self._back_to_welcome,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.GREY,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.exit_button = ft.Button(
+            "退出游戏",
+            on_click=self._exit_to_selector,
+            width=200,
+            height=60,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=20, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.game_exit_button = ft.Button(
+            "退出",
+            on_click=self._exit_game_during_play,
+            width=100,
+            height=40,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.RED,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=14, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        self.welcome_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "🏎️ 极速赛车",
+                        size=48,
+                        color=ft.Colors.BLUE_400,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "选择难度",
+                        size=22,
+                        color=ft.Colors.WHITE,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=15, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.medium_button, self.hard_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=30
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "中等难度：速度适中，障碍物较少",
+                        size=14,
+                        color=ft.Colors.GREEN_400
+                    ),
+                    ft.Text(
+                        "最高难度：速度快，障碍物密集",
+                        size=14,
+                        color=ft.Colors.RED_400
+                    ),
+                    ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "操作说明：",
+                        size=16,
+                        color=ft.Colors.WHITE,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Text(
+                        "A 键：向左移动 | D 键：向右移动 | J 键：按住加速",
+                        size=14,
+                        color=ft.Colors.GREY_400
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Text(
+                        "坚持 30 秒不撞车即可获胜！",
+                        size=16,
+                        color=ft.Colors.BLUE_400
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            alignment=ft.Alignment(0, 0)
+        )
+        
+        self.game_container = ft.Container(
+            width=self.GAME_WIDTH,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.GREY_800,
+            border=ft.Border.all(3, ft.Colors.WHITE),
+            content=ft.Stack([])
+        )
+        
+        self.game_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [self.speed_text, ft.Container(expand=True), self.time_text, ft.Container(expand=True), self.game_exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.game_container],
+                        alignment=ft.MainAxisAlignment.CENTER
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        self.game_over_screen = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text(
+                        "游戏结束",
+                        size=48,
+                        color=ft.Colors.RED,
+                        weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Divider(height=30, color=ft.Colors.TRANSPARENT),
+                    self.game_over_message,
+                    ft.Divider(height=50, color=ft.Colors.TRANSPARENT),
+                    ft.Row(
+                        [self.restart_button, self.back_button, self.exit_button],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=20
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            ),
+            expand=True,
+            visible=False
+        )
+        
+        return ft.Stack(
+            [
+                self.welcome_screen,
+                self.game_screen,
+                self.game_over_screen
+            ],
+            expand=True
+        )
+    
+    def _show_welcome_screen(self):
+        """显示欢迎界面"""
+        self.welcome_screen.visible = True
+        self.game_screen.visible = False
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_screen(self):
+        """显示游戏界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = True
+        self.game_over_screen.visible = False
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _show_game_over_screen(self, won: bool = False):
+        """显示游戏结束界面"""
+        self.welcome_screen.visible = False
+        self.game_screen.visible = False
+        self.game_over_screen.visible = True
+        
+        if won:
+            self.game_over_screen.content.controls[0].value = "🎉 恭喜获胜！"
+            self.game_over_screen.content.controls[0].color = ft.Colors.GREEN
+            self.game_over_message.value = f"太棒了！你坚持了 {self.game.game_time:.1f} 秒！"
+        else:
+            self.game_over_screen.content.controls[0].value = "💥 游戏结束"
+            self.game_over_screen.content.controls[0].color = ft.Colors.RED
+            self.game_over_message.value = f"很遗憾！你坚持了 {self.game.game_time:.1f} 秒"
+        
+        self.welcome_screen.update()
+        self.game_screen.update()
+        self.game_over_screen.update()
+    
+    def _select_difficulty(self, difficulty: DifficultyLevel):
+        """选择难度并开始游戏"""
+        import time
+        self.selected_difficulty = difficulty
+        self.game = RacingGame(difficulty)
+        self.game.init_game()
+        self.game.is_running = True
+        self.keys_pressed = set()
+        self.last_update_time = time.time()
+        
+        self._update_speed()
+        self._update_time()
+        
+        self._show_game_screen()
+        
+        if self.page:
+            self.game_task = self.page.run_task(self._game_loop)
+    
+    def _start_game(self, e):
+        """开始游戏（使用当前选择的难度）"""
+        self._select_difficulty(self.selected_difficulty)
+    
+    def _on_keyboard_event(self, e):
+        """键盘事件处理"""
+        if not self.game or not self.game.is_running:
+            return
+        
+        key = e.key.lower()
+        is_pressed = not hasattr(e, 'type') or e.type != 'keyup'
+        
+        if is_pressed:
+            self.keys_pressed.add(key)
+        else:
+            self.keys_pressed.discard(key)
+        
+        if key == 'a' and is_pressed:
+            self.game.move_left()
+        elif key == 'd' and is_pressed:
+            self.game.move_right()
+        elif key == 'j':
+            self.game.set_accelerating(is_pressed)
+    
+    def _update_speed(self):
+        """更新速度显示"""
+        if self.game:
+            speed_text = f"车速: {int(self.game.speed)} km/h"
+            self.speed_text.value = speed_text
+            
+            if self.game.speed >= 120:
+                self.speed_text.color = ft.Colors.RED
+            elif self.game.speed >= 80:
+                self.speed_text.color = ft.Colors.ORANGE
+            else:
+                self.speed_text.color = ft.Colors.WHITE
+            
+            self.speed_text.update()
+    
+    def _update_time(self):
+        """更新时间显示"""
+        if self.game:
+            remaining = RacingGame.WIN_TIME - self.game.game_time
+            time_text = f"时间: {self.game.game_time:.1f} / {RacingGame.WIN_TIME} 秒"
+            self.time_text.value = time_text
+            
+            if remaining <= 5:
+                self.time_text.color = ft.Colors.GREEN
+            else:
+                self.time_text.color = ft.Colors.WHITE
+            
+            self.time_text.update()
+    
+    def _render_game(self):
+        """渲染游戏"""
+        if not self.game or not self.game_container:
+            return
+        
+        stack = self.game_container.content
+        stack.controls.clear()
+        
+        road_bg = ft.Container(
+            width=self.GAME_WIDTH,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.GREY_700
+        )
+        stack.controls.append(road_bg)
+        
+        for i in range(1, RacingGame.LANE_COUNT):
+            lane_x = i * self.LANE_WIDTH
+            lane_line = ft.Container(
+                width=2,
+                height=self.GAME_HEIGHT,
+                bgcolor=ft.Colors.WHITE30,
+                left=lane_x - 1
+            )
+            stack.controls.append(lane_line)
+        
+        for line in self.game.road_lines:
+            for i in range(1, RacingGame.LANE_COUNT):
+                lane_x = i * self.LANE_WIDTH - 3
+                line_rect = ft.Container(
+                    width=6,
+                    height=line.height,
+                    bgcolor=ft.Colors.WHITE,
+                    left=lane_x,
+                    top=line.y
+                )
+                stack.controls.append(line_rect)
+        
+        left_border = ft.Container(
+            width=4,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.WHITE,
+            left=0
+        )
+        right_border = ft.Container(
+            width=4,
+            height=self.GAME_HEIGHT,
+            bgcolor=ft.Colors.WHITE,
+            left=self.GAME_WIDTH - 4
+        )
+        stack.controls.append(left_border)
+        stack.controls.append(right_border)
+        
+        for obstacle in self.game.obstacles:
+            obs_x = obstacle.lane * self.LANE_WIDTH + (self.LANE_WIDTH - obstacle.width) // 2
+            
+            obs = ft.Container(
+                width=obstacle.width,
+                height=obstacle.height,
+                bgcolor=ft.Colors.TRANSPARENT,
+                left=obs_x,
+                top=obstacle.y,
+                content=ft.Stack([
+                    ft.Container(
+                        width=obstacle.width,
+                        height=obstacle.height,
+                        bgcolor=ft.Colors.RED_600,
+                        border_radius=ft.BorderRadius(8, 8, 12, 12),
+                        border=ft.Border.all(2, ft.Colors.RED_800)
+                    ),
+                    ft.Container(
+                        width=obstacle.width - 12,
+                        height=18,
+                        bgcolor=ft.Colors.LIGHT_BLUE_200,
+                        left=6,
+                        top=8,
+                        border_radius=3
+                    ),
+                    ft.Container(
+                        width=8,
+                        height=10,
+                        bgcolor=ft.Colors.RED_900,
+                        left=4,
+                        top=obstacle.height - 4,
+                        border_radius=2
+                    ),
+                    ft.Container(
+                        width=8,
+                        height=10,
+                        bgcolor=ft.Colors.RED_900,
+                        right=4,
+                        top=obstacle.height - 4,
+                        border_radius=2
+                    )
+                ]),
+                shadow=ft.BoxShadow(
+                    spread_radius=1,
+                    blur_radius=6,
+                    color=ft.Colors.BLACK54,
+                    offset=ft.Offset(2, 2)
+                )
+            )
+            
+            stack.controls.append(obs)
+        
+        player_x = self.game.get_player_x()
+        
+        player = ft.Container(
+            width=self.PLAYER_WIDTH,
+            height=self.PLAYER_HEIGHT,
+            bgcolor=ft.Colors.TRANSPARENT,
+            left=player_x,
+            top=self.game.player_y,
+            content=ft.Stack([
+                ft.Container(
+                    width=self.PLAYER_WIDTH,
+                    height=self.PLAYER_HEIGHT,
+                    bgcolor=ft.Colors.BLUE_500,
+                    border_radius=ft.BorderRadius(12, 12, 8, 8),
+                    border=ft.Border.all(2, ft.Colors.BLUE_700)
+                ),
+                ft.Container(
+                    width=self.PLAYER_WIDTH - 12,
+                    height=18,
+                    bgcolor=ft.Colors.LIGHT_BLUE_200,
+                    left=6,
+                    top=self.PLAYER_HEIGHT - 28,
+                    border_radius=3
+                ),
+                ft.Container(
+                    width=10,
+                    height=6,
+                    bgcolor=ft.Colors.YELLOW_400,
+                    left=5,
+                    top=2,
+                    border_radius=1
+                ),
+                ft.Container(
+                    width=10,
+                    height=6,
+                    bgcolor=ft.Colors.YELLOW_400,
+                    right=5,
+                    top=2,
+                    border_radius=1
+                ),
+                ft.Container(
+                    width=8,
+                    height=10,
+                    bgcolor=ft.Colors.BLUE_900,
+                    left=4,
+                    top=2,
+                    border_radius=2
+                ),
+                ft.Container(
+                    width=8,
+                    height=10,
+                    bgcolor=ft.Colors.BLUE_900,
+                    right=4,
+                    top=2,
+                    border_radius=2
+                )
+            ]),
+            shadow=ft.BoxShadow(
+                spread_radius=2,
+                blur_radius=8,
+                color=ft.Colors.BLACK54,
+                offset=ft.Offset(3, 3)
+            )
+        )
+        
+        stack.controls.append(player)
+        
+        self.game_container.update()
+    
+    async def _game_loop(self):
+        """游戏主循环"""
+        import time
+        
+        if not self.game:
+            return
+        
+        last_time = time.time()
+        
+        while self.game.is_running:
+            current_time = time.time()
+            delta_time = current_time - last_time
+            last_time = current_time
+            
+            continue_game = self.game.update(delta_time)
+            
+            self._update_speed()
+            self._update_time()
+            self._render_game()
+            
+            if not continue_game:
+                if self.game.won:
+                    self._show_game_over_screen(won=True)
+                else:
+                    self._show_game_over_screen(won=False)
+                break
+            
+            await asyncio.sleep(0.016)
+    
+    def _restart_game(self, e):
+        """重新开始游戏"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self._start_game(e)
+    
+    def _back_to_welcome(self, e):
+        """返回欢迎界面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._show_welcome_screen()
+    
+    def _exit_to_selector(self, e):
+        """退出到游戏选择页面"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        if self.on_exit:
+            self.on_exit()
+    
+    def _exit_game_during_play(self, e):
+        """游戏进行中退出"""
+        if self.game_task and not self.game_task.done():
+            self.game_task.cancel()
+        
+        self.game = None
+        self._exit_to_selector(e)
+
+
 class GameSelector:
     """游戏选择页面"""
     
@@ -5475,8 +6765,8 @@ class GameSelector:
         page.theme_mode = ft.ThemeMode.LIGHT
         page.bgcolor = ft.Colors.BLUE_GREY_900
         page.padding = 20
-        page.window_width = 900
-        page.window_height = 700
+        page.window_width = 1000
+        page.window_height = 900
         page.window_resizable = True
         
         self._show_selector_screen()
@@ -5676,6 +6966,42 @@ class GameSelector:
             color=ft.Colors.GREY_400
         )
         
+        racing_button = ft.Button(
+            "🏎️ 极速赛车",
+            on_click=self._start_racing_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.BLUE_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        racing_desc = ft.Text(
+            "A/D 左右移动，J 加速，躲避障碍物坚持30秒获胜",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
+        lianliankan_button = ft.Button(
+            "🍇 连连看",
+            on_click=self._start_lianliankan_game,
+            width=250,
+            height=80,
+            style=ft.ButtonStyle(
+                bgcolor=ft.Colors.PINK_700,
+                color=ft.Colors.WHITE,
+                text_style=ft.TextStyle(size=24, weight=ft.FontWeight.BOLD)
+            )
+        )
+        
+        lianliankan_desc = ft.Text(
+            "5×6棋盘，点击翻开配对相同水果，30秒内全部消除获胜",
+            size=14,
+            color=ft.Colors.GREY_400
+        )
+        
         return ft.Container(
             content=ft.Column(
                 [
@@ -5724,6 +7050,13 @@ class GameSelector:
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [racing_button, racing_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -5743,6 +7076,13 @@ class GameSelector:
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [sudoku_button, sudoku_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
                             )
                         ],
                         alignment=ft.MainAxisAlignment.CENTER
@@ -5750,13 +7090,6 @@ class GameSelector:
                     ft.Divider(height=40, color=ft.Colors.TRANSPARENT),
                     ft.Row(
                         [
-                            ft.Column(
-                                [sudoku_button, sudoku_desc],
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=10
-                            ),
-                            ft.Container(width=40),
                             ft.Column(
                                 [junqi_button, junqi_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
@@ -5766,6 +7099,13 @@ class GameSelector:
                             ft.Container(width=40),
                             ft.Column(
                                 [huarongdao_button, huarongdao_desc],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=10
+                            ),
+                            ft.Container(width=40),
+                            ft.Column(
+                                [lianliankan_button, lianliankan_desc],
                                 alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=10
@@ -5812,8 +7152,8 @@ class GameSelector:
         
         self.page.title = "小游戏合集"
         self.page.bgcolor = ft.Colors.BLUE_GREY_900
-        self.page.window_width = 900
-        self.page.window_height = 700
+        self.page.window_width = 1000
+        self.page.window_height = 900
         self.page.on_keyboard_event = None
         
         selector_ui = self._build_selector_ui()
@@ -6018,12 +7358,57 @@ class GameSelector:
         game_content = game_ui.build(self.page)
         self.page.add(game_content)
         game_ui.show()
+    
+    def _start_racing_game(self, e):
+        """启动赛车游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = RacingGameUI(on_exit=on_exit)
+        
+        self.page.title = "极速赛车游戏"
+        self.page.bgcolor = ft.Colors.BLUE_GREY_900
+        self.page.window_width = 500
+        self.page.window_height = 750
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
+    
+    def _start_lianliankan_game(self, e):
+        """启动连连看游戏"""
+        if self.page is None:
+            return
+        
+        self.page.clean()
+        
+        def on_exit():
+            self._show_selector_screen()
+        
+        game_ui = LianliankanGameUI(on_exit=on_exit)
+        
+        self.page.title = "连连看游戏"
+        self.page.bgcolor = ft.Colors.BLUE_GREY_900
+        self.page.window_width = 1200
+        self.page.window_height = 1050
+        
+        self.current_game_ui = game_ui
+        game_content = game_ui.build(self.page)
+        self.page.add(game_content)
+        game_ui.show()
 
 
 def main():
     """主函数"""
     import os
-    
+    import socket
+
     print("=" * 50)
     print("小游戏合集")
     print("=" * 50)
@@ -6032,13 +7417,20 @@ def main():
     print(f"Flet 版本: {ft.__version__}")
     print("=" * 50)
     print("正在启动游戏界面...")
-    print("游戏将在浏览器中打开。")
-    print("如果浏览器没有自动打开，请手动访问显示的 URL。")
+
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+
+    print(f"\n游戏界面访问地址:")
+    print(f"  - 本地访问: http://localhost:8000")
+    print(f"  - 局域网访问: http://{local_ip}:8000")
+    print(f"\n游戏将在浏览器中打开。")
+    print(f"如果浏览器没有自动打开，请手动访问上述 URL。")
     print("=" * 50)
-    
+
     try:
         game_selector = GameSelector()
-        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER)
+        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8000)
     except Exception as e:
         print(f"\n错误: {e}")
         print("\n可能的解决方案:")

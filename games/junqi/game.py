@@ -124,11 +124,23 @@ class Move:
         self.result = None  # "capture", "both_die", "die", "flag_capture"
 
 
+class GamePhase(Enum):
+    """游戏阶段"""
+    LAYOUT = 1
+    PLAYING = 2
+    GAME_OVER = 3
+
+
 class JunqiGame(BaseGame):
     """军旗游戏类"""
 
     BOARD_WIDTH = 12
-    BOARD_HEIGHT = 10
+    BOARD_HEIGHT = 12
+    
+    RED_AREA_TOP = 0
+    RED_AREA_BOTTOM = 5
+    BLUE_AREA_TOP = 6
+    BLUE_AREA_BOTTOM = 11
 
     def __init__(self):
         super().__init__("军旗")
@@ -142,6 +154,9 @@ class JunqiGame(BaseGame):
         self.winner: Optional[PlayerSide] = None
         self.moves: List[Move] = []
         self.last_ai_move: Optional[Move] = None
+        self.phase: GamePhase = GamePhase.LAYOUT
+        self.layout_player: PlayerSide = PlayerSide.RED
+        self.revealed_pieces: Dict[Tuple[int, int], bool] = {}
 
     def init_game(self) -> None:
         """初始化游戏"""
@@ -156,85 +171,120 @@ class JunqiGame(BaseGame):
         self.moves = []
         self.last_ai_move = None
         self.is_running = False
+        self.phase = GamePhase.LAYOUT
+        self.layout_player = PlayerSide.RED
+        self.revealed_pieces = {}
 
     def start(self) -> None:
         """开始游戏"""
         self.init_game()
         self.is_running = True
 
+    def start_play_phase(self) -> None:
+        """开始对战阶段"""
+        self.phase = GamePhase.PLAYING
+        self.current_player = PlayerSide.RED
+
     def setup_default_board(self) -> None:
         """设置默认棋盘布局"""
-        red_pieces = self._generate_default_pieces(PlayerSide.RED)
-        blue_pieces = self._generate_default_pieces(PlayerSide.BLUE)
-        
-        for piece in red_pieces:
-            self.board[piece.position.y][piece.position.x] = piece
-            self.pieces[PlayerSide.RED].append(piece)
-        
-        for piece in blue_pieces:
-            self.board[piece.position.y][piece.position.x] = piece
-            self.pieces[PlayerSide.BLUE].append(piece)
+        self._generate_default_pieces(PlayerSide.RED)
+        self._generate_default_pieces(PlayerSide.BLUE)
+        self.phase = GamePhase.PLAYING
 
     def _generate_default_pieces(self, side: PlayerSide) -> List[Piece]:
-        """生成默认棋子布局"""
+        """生成默认棋子布局（每方6×6区域）"""
         pieces = []
         
         if side == PlayerSide.RED:
             base_y = 0
             flag_x = 5
             mine_positions = [(4, 0), (6, 0), (5, 1)]
+            bomb_positions = [(3, 0), (8, 0)]
+            engineer_positions = [(1, 2), (5, 2), (10, 2)]
+            platoon_positions = [(2, 2), (4, 2), (9, 2)]
+            company_positions = [(3, 1), (7, 1), (6, 2)]
+            battalion_positions = [(0, 3), (11, 3)]
+            regiment_positions = [(2, 1), (8, 1)]
+            brigade_positions = [(1, 1), (9, 1)]
+            division_positions = [(0, 1), (10, 1)]
+            corps_position = (1, 0)
+            commander_position = (10, 0)
         else:
-            base_y = 9
+            base_y = 6
             flag_x = 6
-            mine_positions = [(5, 9), (7, 9), (6, 8)]
+            mine_positions = [(7, 11), (5, 11), (6, 10)]
+            bomb_positions = [(8, 11), (3, 11)]
+            engineer_positions = [(10, 9), (6, 9), (1, 9)]
+            platoon_positions = [(9, 9), (7, 9), (2, 9)]
+            company_positions = [(8, 10), (4, 10), (5, 9)]
+            battalion_positions = [(11, 8), (0, 8)]
+            regiment_positions = [(9, 10), (3, 10)]
+            brigade_positions = [(10, 10), (2, 10)]
+            division_positions = [(11, 10), (1, 10)]
+            corps_position = (10, 11)
+            commander_position = (1, 11)
         
-        pieces.append(Piece(PieceType.FLAG, side, Position(flag_x, base_y)))
+        def add_piece(piece_type: PieceType, x: int, y: int):
+            piece = Piece(piece_type, side, Position(x, y))
+            pieces.append(piece)
+            self.board[y][x] = piece
+            self.pieces[side].append(piece)
+        
+        add_piece(PieceType.FLAG, flag_x, base_y if side == PlayerSide.RED else 11)
         
         for x, y in mine_positions:
-            pieces.append(Piece(PieceType.MINE, side, Position(x, y)))
+            add_piece(PieceType.MINE, x, y)
         
-        pieces.append(Piece(PieceType.BOMB, side, Position(3, base_y)))
-        pieces.append(Piece(PieceType.BOMB, side, Position(8, base_y)))
+        for x, y in bomb_positions:
+            add_piece(PieceType.BOMB, x, y)
         
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(1, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(5, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.ENGINEER, side, Position(10, 2 if side == PlayerSide.RED else 7)))
+        for x, y in engineer_positions:
+            add_piece(PieceType.ENGINEER, x, y)
         
-        pieces.append(Piece(PieceType.PLATOON, side, Position(2, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.PLATOON, side, Position(4, 2 if side == PlayerSide.RED else 7)))
-        pieces.append(Piece(PieceType.PLATOON, side, Position(9, 2 if side == PlayerSide.RED else 7)))
+        for x, y in platoon_positions:
+            add_piece(PieceType.PLATOON, x, y)
         
-        pieces.append(Piece(PieceType.COMPANY, side, Position(3, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.COMPANY, side, Position(7, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.COMPANY, side, Position(6, 2 if side == PlayerSide.RED else 7)))
+        for x, y in company_positions:
+            add_piece(PieceType.COMPANY, x, y)
         
-        pieces.append(Piece(PieceType.BATTALION, side, Position(0, 3 if side == PlayerSide.RED else 6)))
-        pieces.append(Piece(PieceType.BATTALION, side, Position(11, 3 if side == PlayerSide.RED else 6)))
+        for x, y in battalion_positions:
+            add_piece(PieceType.BATTALION, x, y)
         
-        pieces.append(Piece(PieceType.REGIMENT, side, Position(2, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.REGIMENT, side, Position(8, 1 if side == PlayerSide.RED else 8)))
+        for x, y in regiment_positions:
+            add_piece(PieceType.REGIMENT, x, y)
         
-        pieces.append(Piece(PieceType.BRIGADE, side, Position(1, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.BRIGADE, side, Position(9, 1 if side == PlayerSide.RED else 8)))
+        for x, y in brigade_positions:
+            add_piece(PieceType.BRIGADE, x, y)
         
-        pieces.append(Piece(PieceType.DIVISION, side, Position(0, 1 if side == PlayerSide.RED else 8)))
-        pieces.append(Piece(PieceType.DIVISION, side, Position(10, 1 if side == PlayerSide.RED else 8)))
+        for x, y in division_positions:
+            add_piece(PieceType.DIVISION, x, y)
         
-        pieces.append(Piece(PieceType.CORPS, side, Position(1, 0 if side == PlayerSide.RED else 9)))
-        pieces.append(Piece(PieceType.COMMANDER, side, Position(10, 0 if side == PlayerSide.RED else 9)))
+        add_piece(PieceType.CORPS, corps_position[0], corps_position[1])
+        add_piece(PieceType.COMMANDER, commander_position[0], commander_position[1])
         
         return pieces
+
+    def is_piece_visible(self, piece: Piece, viewer: PlayerSide) -> bool:
+        """判断棋子对某个玩家是否可见"""
+        if piece.side == viewer:
+            return True
+        pos_tuple = (piece.position.x, piece.position.y)
+        return self.revealed_pieces.get(pos_tuple, False)
+
+    def reveal_piece(self, x: int, y: int) -> None:
+        """揭示棋子（战斗后或特殊情况）"""
+        self.revealed_pieces[(x, y)] = True
 
     def is_railway(self, pos: Position) -> bool:
         """判断位置是否在铁路线上"""
         if pos.x < 0 or pos.x >= self.BOARD_WIDTH or pos.y < 0 or pos.y >= self.BOARD_HEIGHT:
             return False
         
-        if pos.y in [1, 2, 7, 8]:
+        if pos.y in [1, 2, 9, 10]:
             return True
-        if pos.x in [0, 11] and pos.y in [3, 4, 5, 6]:
+        if pos.x in [0, 11] and pos.y in [3, 4, 5, 6, 7, 8]:
             return True
-        if pos.x in [5, 6] and pos.y in [3, 4, 5, 6]:
+        if pos.x in [5, 6] and pos.y in [3, 4, 5, 6, 7, 8]:
             return True
         
         return False
@@ -244,8 +294,8 @@ class JunqiGame(BaseGame):
         camp_positions = [
             (2, 3), (4, 3), (3, 4),
             (7, 3), (9, 3), (8, 4),
-            (2, 6), (4, 6), (3, 5),
-            (7, 6), (9, 6), (8, 5)
+            (2, 8), (4, 8), (3, 7),
+            (7, 8), (9, 8), (8, 7)
         ]
         return pos.to_tuple() in camp_positions
 
@@ -290,12 +340,12 @@ class JunqiGame(BaseGame):
             (7, 3): [(7, 4), (6, 3), (8, 3)],
             (9, 3): [(9, 4), (8, 3), (10, 3)],
             (8, 4): [(7, 4), (9, 4), (8, 3), (8, 5)],
-            (2, 6): [(2, 5), (1, 6), (3, 6)],
-            (4, 6): [(4, 5), (3, 6), (5, 6)],
-            (3, 5): [(2, 5), (4, 5), (3, 4), (3, 6)],
-            (7, 6): [(7, 5), (6, 6), (8, 6)],
-            (9, 6): [(9, 5), (8, 6), (10, 6)],
-            (8, 5): [(7, 5), (9, 5), (8, 4), (8, 6)]
+            (2, 8): [(2, 7), (1, 8), (3, 8)],
+            (4, 8): [(4, 7), (3, 8), (5, 8)],
+            (3, 7): [(2, 7), (4, 7), (3, 6), (3, 8)],
+            (7, 8): [(7, 7), (6, 8), (8, 8)],
+            (9, 8): [(9, 7), (8, 8), (10, 8)],
+            (8, 7): [(7, 7), (9, 7), (8, 6), (8, 8)]
         }
         
         from_tuple = from_pos.to_tuple()
@@ -397,6 +447,9 @@ class JunqiGame(BaseGame):
         move_result = None
         
         if to_piece and to_piece.is_alive:
+            self.reveal_piece(from_pos.x, from_pos.y)
+            self.reveal_piece(to_pos.x, to_pos.y)
+            
             result, message = self._combat(piece, to_piece)
             move_result = result
             
