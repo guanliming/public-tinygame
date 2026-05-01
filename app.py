@@ -7332,7 +7332,8 @@ class GameSelector:
 def main():
     """主函数"""
     import os
-    
+    import socket
+
     print("=" * 50)
     print("小游戏合集")
     print("=" * 50)
@@ -7341,13 +7342,20 @@ def main():
     print(f"Flet 版本: {ft.__version__}")
     print("=" * 50)
     print("正在启动游戏界面...")
-    print("游戏将在浏览器中打开。")
-    print("如果浏览器没有自动打开，请手动访问显示的 URL。")
+
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+
+    print(f"\n游戏界面访问地址:")
+    print(f"  - 本地访问: http://localhost:8000")
+    print(f"  - 局域网访问: http://{local_ip}:8000")
+    print(f"\n游戏将在浏览器中打开。")
+    print(f"如果浏览器没有自动打开，请手动访问上述 URL。")
     print("=" * 50)
-    
+
     try:
         game_selector = GameSelector()
-        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER)
+        ft.run(game_selector.main, view=ft.AppView.WEB_BROWSER, port=8000)
     except Exception as e:
         print(f"\n错误: {e}")
         print("\n可能的解决方案:")
