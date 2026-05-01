@@ -8,10 +8,12 @@ from games.doudizhu.card import (
 from games.doudizhu.player import DoudizhuPlayer, PlayerRole
 from games.doudizhu.rules import get_card_type, compare_cards
 from games.doudizhu.game import DoudizhuGame
+from games.doudizhu.ui import CardWidget, PlayerInfoWidget, PlayedCardsWidget, DoudizhuGameUI
 
 __all__ = [
     'DoudizhuCard', 'Suit', 'CardType', 'create_deck', 'CARD_VALUES',
     'DoudizhuPlayer', 'PlayerRole',
     'get_card_type', 'compare_cards',
-    'DoudizhuGame'
+    'DoudizhuGame',
+    'CardWidget', 'PlayerInfoWidget', 'PlayedCardsWidget', 'DoudizhuGameUI'
 ]
