@@ -71,9 +71,9 @@ class Card:
 class LianliankanGame(BaseGame):
     """连连看游戏类"""
     
-    ROWS = 5
-    COLS = 6
-    GAME_DURATION = 30
+    ROWS = 4
+    COLS = 4
+    GAME_DURATION = 60
     TOTAL_CARDS = ROWS * COLS
     TOTAL_FRUITS = 15
     
